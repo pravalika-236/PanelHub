@@ -1,13 +1,13 @@
-import { Schema, model } from "mongoose";
+import mongoose from 'mongoose';
 
-const slotSchema = new Schema({
+const slotSchema = new mongoose.Schema({
   UG: { type: Boolean, default: false },
   PG: { type: Boolean, default: false },
   PHD: { type: Boolean, default: false },
-  bookStatus: { type: Boolean, default: false }
+  bookStatus: { type: Boolean, default: false },
 }, { _id: false });
 
-const daySchema = new Schema({
+const daySchema = new mongoose.Schema({
   "08-09": slotSchema,
   "09-10": slotSchema,
   "10-11": slotSchema,
@@ -22,10 +22,10 @@ const daySchema = new Schema({
   "19-20": slotSchema,
 }, { _id: false });
 
-const facultyFreeSlotSchema = new Schema({
+const facultyFreeSlotSchema = new mongoose.Schema({
   facultyId: {
-    type: Schema.Types.ObjectId,
-    ref: "Faculty",
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Faculty',
     required: true,
   },
   freeSlot: {
@@ -39,4 +39,5 @@ const facultyFreeSlotSchema = new Schema({
   },
 });
 
-export default model("FacultyFreeSlot", facultyFreeSlotSchema);
+const FacultyFreeSlot = mongoose.model('FacultyFreeSlot', facultyFreeSlotSchema);
+export default FacultyFreeSlot;

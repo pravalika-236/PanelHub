@@ -1,10 +1,25 @@
-import { Router } from "express";
-const facultyRouter = Router();
-import { createFacultySlot, getFacultySlot, updateFacultySlot } from "../controllers/facultyControllers.js";
+import express from "express";
+import {
+  getConfirmedBookings,
+  approveBooking,
+  getCommonSlots,
+} from "../controllers/facultyController.js";
+import {
+  createFacultySlot,
+  getFacultySlot,
+  updateFacultySlot,
+} from "../controllers/facultyControllers.js";
 
-facultyRouter.post("/:facultyId", createFacultySlot);
-facultyRouter.put("/:facultyId", updateFacultySlot);
-facultyRouter.get("/:facultyId", getFacultySlot);
+const router = express.Router();
 
-export default facultyRouter;
+// ===== Faculty Slot Management (Upstream) =====
+router.post("/:facultyId", createFacultySlot);
+router.put("/:facultyId", updateFacultySlot);
+router.get("/:facultyId", getFacultySlot);
 
+// ===== Faculty Booking / Common Slot APIs (Your Feature) =====
+router.get("/confirmed", getConfirmedBookings);
+router.post("/approve", approveBooking);
+router.post("/common-slots", getCommonSlots);
+
+export default router;
