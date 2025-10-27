@@ -1,17 +1,14 @@
-const API_BASE = "http://localhost:5000/api";
+import { createSlice } from '@reduxjs/toolkit';
 
-export const searchAvailableSlots = createAsyncThunk(
-  'booking/searchSlots',
-  async (data, { rejectWithValue }) => {
-    try {
-      const res = await fetch(`${API_BASE}/bookings/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      return await res.json();
-    } catch (err) {
-      return rejectWithValue(err.message);
-    }
-  }
-);
+const bookingSlice = createSlice({
+  name: 'booking',
+  initialState: { commonSlots: [] },
+  reducers: {
+    searchAvailableSlots: (state, action) => {
+      state.commonSlots = action.payload;
+    },
+  },
+});
+
+export const { searchAvailableSlots } = bookingSlice.actions;
+export default bookingSlice.reducer;   // ✅ add this line
