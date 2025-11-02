@@ -2,7 +2,7 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 
 const Sidebar = ({ activeSection, onSectionChange }) => {
-  const { user } = useSelector(state => state.auth);
+  const { userName, role } = useSelector(state => state.auth);
   const scholarMenuItems = [
     { id: 'book-slot', label: 'Book Slot', icon: '📅' },
     { id: 'manage-booking', label: 'Manage Booking', icon: '📋' }
@@ -15,7 +15,7 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
     { id: 'unapproved-bookings', label: 'View Unapproved Booking', icon: '⏳' }
   ];
 
-  const menuItems = user.role === 'scholar' ? scholarMenuItems : facultyMenuItems;
+  const menuItems = role === 'Scholar' ? scholarMenuItems : facultyMenuItems;
 
   return (
     <aside style={{

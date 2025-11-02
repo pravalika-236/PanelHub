@@ -6,7 +6,7 @@ import Select from 'react-select';
 
 const BookSlot = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { userName, department, courseCategory, id } = useSelector(state => state.auth);
   const { availableSlots, hasActiveBooking, loading, error, success } = useSelector(state => state.booking);
 
   const [selectedFaculties, setSelectedFaculties] = useState([]);
@@ -35,7 +35,7 @@ const BookSlot = () => {
   ];
 
   // Filter faculties by user's department
-  const departmentFaculties = facultyData.filter(faculty => faculty.department === user.department);
+  const departmentFaculties = facultyData.filter(faculty => faculty.department === department);
 
   const handleFacultyChange = (facultyId) => {
     const faculty = departmentFaculties.find(f => f.id === facultyId);
@@ -63,7 +63,7 @@ const BookSlot = () => {
     dispatch(searchAvailableSlots({
       faculties: selectedFaculties,
       date: selectedDate,
-      department: user.department
+      department: department
     }));
   };
 
@@ -73,9 +73,9 @@ const BookSlot = () => {
       faculties: selectedFaculties,
       date: selectedDate,
       time: availableSlots.find(slot => slot.id === slotId)?.time,
-      userId: user.id,
-      department: user.department,
-      courseCategory: user.courseCategory
+      userId: id,
+      department: department,
+      courseCategory: courseCategory
     }));
   };
 

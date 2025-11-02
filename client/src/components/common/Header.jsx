@@ -4,7 +4,7 @@ import { logout } from '../../store/slices/authSlice';
 
 const Header = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { userName, role } = useSelector(state => state.auth);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -28,10 +28,10 @@ const Header = () => {
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>PanelHub</h1>
       </div>
-      {user && (
+      {userName && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ fontSize: '16px' }}>
-            Welcome, {user.name} ({user.role === 'scholar' ? 'Scholar' : 'Faculty'})
+            Welcome, {userName} ({role === 'scholar' ? 'Scholar' : 'Faculty'})
           </span>
           <button 
             onClick={handleLogout}

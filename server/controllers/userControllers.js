@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 
 // Generate Token
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "15min" });
 };
 
 // Register User
@@ -31,6 +31,8 @@ exports.registerUser = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        department: newUser.department,
+        courseCategory: newUser.courseCategory ? newUser.courseCategory : null
       },
     });
   } catch (error) {
