@@ -60,3 +60,11 @@ export const getCommonSlots = async (req, res) => {
   }
 };
 
+export const getAllFaculties = async (req, res) => {
+  try {
+    const faculties = await Faculty.find(); // example Mongoose model
+    res.json(faculties);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

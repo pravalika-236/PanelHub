@@ -14,7 +14,7 @@ import {
 
 const router = express.Router();
 
-// ===== Faculty Slot Management (Upstream core) =====
+// ===== Faculty Slot Management (Upstream standard endpoints) =====
 router.post("/:facultyId", createFacultySlot);
 router.put("/:facultyId", updateFacultySlot);
 router.get("/:facultyId", getFacultySlot);
@@ -24,7 +24,7 @@ router.get("/confirmed", getConfirmedBookings);
 router.post("/approve", approveBooking);
 router.post("/common-slots", getCommonSlots);
 
-// ✅ Faculty dropdown (your feature)
+// ===== Additional Endpoint (Your Feature for Faculty Dropdown) =====
 router.get("/faculty", getAllFaculties);
 
 export default router;
