@@ -1,37 +1,53 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage'; // defaults to localStorage
+import storage from 'redux-persist/lib/storage';
 import authReducer from './slices/authSlice';
 import bookingReducer from './slices/bookingSlice';
 import facultyReducer from './slices/facultySlice';
+import { useEffect } from 'react';
 
-// Combine all reducers
 const rootReducer = combineReducers({
   auth: authReducer,
   booking: bookingReducer,
   faculty: facultyReducer,
 });
 
-// Configure persist
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'], // Only persist auth slice
+  whitelist: ['auth'],
 };
 
-// Wrap rootReducer with persistReducer
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-// Create store
 export const store = configureStore({
   reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // required for redux-persist
+      serializableCheck: false,
     }),
 });
 
-// Create persistor
 export const persistor = persistStore(store);
+
+export const useClearOnTabClose = () => {
+  useEffect(() => {
+    if (!sessionStorage.getItem('tabActive')) {
+      sessionStorage.setItem('tabActive', 'true');
+    }
+
+    const handleBeforeUnload = (event) => {
+      if (sessionStorage.getItem('tabActive')) {
+        sessionStorage.removeItem('tabActive');
+        persistor.purge();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+}
 
 export default store;

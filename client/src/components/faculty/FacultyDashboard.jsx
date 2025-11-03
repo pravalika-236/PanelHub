@@ -3,6 +3,9 @@ import Header from '../common/Header.jsx';
 import Footer from '../common/Footer.jsx';
 import Sidebar from '../common/Sidebar.jsx';
 import ManageFreeSlots from './ManageFreeSlots.jsx';
+import ManageApprovedBookings from './ManageApprovedBookings.js';
+import ViewConfirmedBookings from './ViewConfirmedBookings.js';
+import ViewUnapprovedBookings from './ViewUnapprovedBookings.js';
 
 const FacultyDashboard = () => {
   const [activeSection, setActiveSection] = useState('manage-slots');
@@ -12,11 +15,11 @@ const FacultyDashboard = () => {
       case 'manage-slots':
         return <ManageFreeSlots />
       case 'confirmed-bookings':
-        return <></>;
+        return <ViewConfirmedBookings />;
       case 'approved-bookings':
-        return <></>;
+        return <ManageApprovedBookings />;
       case 'unapproved-bookings':
-        return <></>;
+        return <ViewUnapprovedBookings />;
       default:
         return <></>;
     }

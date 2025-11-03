@@ -5,7 +5,7 @@ import Loader from '../common/Loader';
 
 const ViewConfirmedBookings = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { id } = useSelector(state => state.auth);
   const { confirmedBookings, loading, error, success } = useSelector(state => state.faculty);
   
   const [filters, setFilters] = useState({
@@ -15,8 +15,8 @@ const ViewConfirmedBookings = () => {
   });
 
   useEffect(() => {
-    dispatch(fetchConfirmedBookings(user.id));
-  }, [dispatch, user.id]);
+    dispatch(fetchConfirmedBookings(id));
+  }, [dispatch, id]);
 
   useEffect(() => {
     if (success) {
@@ -41,7 +41,7 @@ const ViewConfirmedBookings = () => {
 
   const handleCancelBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to cancel this confirmed booking? This will notify all participants.')) {
-      dispatch(cancelFacultyBookingRequest({ bookingId, facultyId: user.id }));
+      dispatch(cancelFacultyBookingRequest({ bookingId, facultyId: id }));
     }
   };
 
@@ -107,6 +107,7 @@ const ViewConfirmedBookings = () => {
               <option value="PhD">PhD</option>
             </select>
           </div>
+          <button className="btn btn-primary" onClick={() => dispatch(fetchConfirmedBookings(id))}>Apply Filters</button>
         </div>
 
         {filteredBookings.length === 0 ? (
@@ -169,14 +170,14 @@ const ViewConfirmedBookings = () => {
                     {booking.faculties.map(faculty => (
                       <div key={faculty.id} style={{
                         padding: '8px 12px',
-                        backgroundColor: faculty.id === user.id ? '#d1ecf1' : '#d4edda',
-                        border: `1px solid ${faculty.id === user.id ? '#bee5eb' : '#c3e6cb'}`,
+                        backgroundColor: faculty.id === id ? '#d1ecf1' : '#d4edda',
+                        border: `1px solid ${faculty.id === id ? '#bee5eb' : '#c3e6cb'}`,
                         borderRadius: '5px',
                         fontSize: '12px'
                       }}>
                         <div style={{ fontWeight: 'bold' }}>{faculty.name}</div>
                         <div style={{ color: '#666' }}>{faculty.email}</div>
-                        {faculty.id === user.id && (
+                        {faculty.id === id && (
                           <div style={{ color: '#0c5460', fontWeight: 'bold' }}>You</div>
                         )}
                       </div>

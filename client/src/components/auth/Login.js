@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginUser, clearError, clearSuccess } from '../../store/slices/authSlice';
+import { loginUser } from '../../store/slices/authSlice';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,13 +18,6 @@ const Login = () => {
       navigate(user.role === 'scholar' ? '/scholar' : '/faculty');
     }
   }, [isAuthenticated, user, navigate]);
-
-  useEffect(() => {
-    return () => {
-      dispatch(clearError());
-      dispatch(clearSuccess());
-    };
-  }, [dispatch]);
 
   const handleChange = (e) => {
     setFormData({
@@ -108,14 +101,6 @@ const Login = () => {
             <Link to="/register/faculty" className="btn btn-secondary" style={{ flex: 1 }}>
               Register as Faculty
             </Link>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
-          <h4 style={{ fontSize: '14px', marginBottom: '10px', color: '#666' }}>Demo Credentials:</h4>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            <p><strong>Scholar:</strong> john@nitc.ac.in / password123</p>
-            <p><strong>Faculty:</strong> smith@nitc.ac.in / password123</p>
           </div>
         </div>
       </div>

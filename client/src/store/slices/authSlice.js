@@ -16,7 +16,7 @@ export const loginUser = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response);
     }
   }
 );
@@ -36,7 +36,7 @@ export const registerScholar = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-        return rejectWithValue(error.message);
+      return rejectWithValue(error.message);
     }
   }
 );
@@ -78,10 +78,16 @@ const authSlice = createSlice({
   },
   reducers: {
     logout: (state) => {
+      state.id = null;
       state.user = null;
       state.isAuthenticated = false;
+      state.authToken = null;
+      state.userName = null;
+      state.email = null;
+      state.role = null;
       state.error = null;
       state.success = null;
+      localStorage.removeItem('persist:root');
     },
     clearError: (state) => {
       state.error = null;
@@ -96,7 +102,6 @@ const authSlice = createSlice({
       // Login
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.id = action.payload.user.id;
@@ -106,11 +111,12 @@ const authSlice = createSlice({
         state.email = action.payload.user.email;
         state.role = action.payload.user.role;
         state.isAuthenticated = true;
-        state.error = null;
+        state.error = action.payload.message;
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.id = null;
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload.data.message;
       })
 
       // Register Scholar
