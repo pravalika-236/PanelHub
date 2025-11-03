@@ -5,7 +5,7 @@ import Loader from '../common/Loader';
 
 const ManageApprovedBookings = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { id } = useSelector(state => state.auth);
   const { approvedBookings, loading, error, success } = useSelector(state => state.faculty);
   
   const [filters, setFilters] = useState({
@@ -15,8 +15,8 @@ const ManageApprovedBookings = () => {
   });
 
   useEffect(() => {
-    dispatch(fetchApprovedBookings(user.id));
-  }, [dispatch, user.id]);
+    dispatch(fetchApprovedBookings(id));
+  }, [dispatch, id]);
 
   useEffect(() => {
     if (success) {
@@ -41,7 +41,7 @@ const ManageApprovedBookings = () => {
 
   const handleCancelBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to cancel this booking? This will notify all participants.')) {
-      dispatch(cancelFacultyBookingRequest({ bookingId, facultyId: user.id }));
+      dispatch(cancelFacultyBookingRequest({ bookingId, facultyId: id }));
     }
   };
 
@@ -107,6 +107,7 @@ const ManageApprovedBookings = () => {
               <option value="PhD">PhD</option>
             </select>
           </div>
+          <button className="btn btn-primary" onClick={() => dispatch(fetchApprovedBookings(id))}>Apply Filters</button>
         </div>
 
         {filteredBookings.length === 0 ? (
@@ -182,7 +183,7 @@ const ManageApprovedBookings = () => {
                         }}>
                           {faculty.approved ? '✓ Approved' : '⏳ Pending'}
                         </div>
-                        {faculty.id === user.id && (
+                        {faculty.id === id && (
                           <div style={{ color: '#0c5460', fontWeight: 'bold' }}>You</div>
                         )}
                       </div>

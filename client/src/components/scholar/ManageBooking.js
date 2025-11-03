@@ -5,12 +5,12 @@ import Loader from '../common/Loader';
 
 const ManageBooking = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { id } = useSelector(state => state.auth);
   const { userBookings, loading, error, success } = useSelector(state => state.booking);
 
   useEffect(() => {
-    dispatch(fetchUserBookings(user.id));
-  }, [dispatch, user.id]);
+    dispatch(fetchUserBookings(id));
+  }, [dispatch, id]);
 
   useEffect(() => {
     if (success) {

@@ -3,6 +3,7 @@ import Header from '../common/Header.jsx';
 import Footer from '../common/Footer.jsx';
 import Sidebar from '../common/Sidebar.jsx';
 import BookSlot from './BookSlot.jsx';
+import ManageBooking from './ManageBooking.js';
 
 const ScholarDashboard = () => {
   const [activeSection, setActiveSection] = useState('book-slot');
@@ -12,7 +13,7 @@ const ScholarDashboard = () => {
       case 'book-slot':
         return <BookSlot />
       case 'manage-booking':
-        return <></>;
+        return <ManageBooking />;
       default:
         return <></>;
     }

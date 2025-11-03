@@ -5,7 +5,7 @@ import Loader from '../common/Loader';
 
 const ViewUnapprovedBookings = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { id } = useSelector(state => state.auth);
   const { unapprovedBookings, loading, error, success } = useSelector(state => state.faculty);
   
   const [filters, setFilters] = useState({
@@ -15,8 +15,8 @@ const ViewUnapprovedBookings = () => {
   });
 
   useEffect(() => {
-    dispatch(fetchUnapprovedBookings(user.id));
-  }, [dispatch, user.id]);
+    dispatch(fetchUnapprovedBookings(id));
+  }, [dispatch, id]);
 
   useEffect(() => {
     if (success) {
@@ -41,13 +41,13 @@ const ViewUnapprovedBookings = () => {
 
   const handleApproveBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to approve this booking request?')) {
-      dispatch(approveBookingRequest({ bookingId, facultyId: user.id }));
+      dispatch(approveBookingRequest({ bookingId, facultyId: id }));
     }
   };
 
   const handleRejectBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to reject this booking request? This will cancel the booking for all participants.')) {
-      dispatch(rejectBookingRequest({ bookingId, facultyId: user.id }));
+      dispatch(rejectBookingRequest({ bookingId, facultyId: id }));
     }
   };
 
@@ -113,6 +113,7 @@ const ViewUnapprovedBookings = () => {
               <option value="PhD">PhD</option>
             </select>
           </div>
+          <button className="btn btn-primary" onClick={() => dispatch(fetchUnapprovedBookings(id))}>Apply Filters</button>
         </div>
 
         {filteredBookings.length === 0 ? (
@@ -188,7 +189,7 @@ const ViewUnapprovedBookings = () => {
                         }}>
                           {faculty.approved ? '✓ Approved' : '⏳ Pending'}
                         </div>
-                        {faculty.id === user.id && (
+                        {faculty.id === id && (
                           <div style={{ color: '#0c5460', fontWeight: 'bold' }}>You</div>
                         )}
                       </div>

@@ -5,15 +5,15 @@ import Loader from '../common/Loader';
 
 const ManageFreeSlots = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const { userName, id } = useSelector(state => state.auth);
   const { calendar, loading, error, success } = useSelector(state => state.faculty);
   
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchFacultyCalendar(user.id));
-  }, [dispatch, user.id]);
+    dispatch(fetchFacultyCalendar(id));
+  }, [dispatch, id]);
 
   useEffect(() => {
     if (success) {
@@ -61,7 +61,7 @@ const ManageFreeSlots = () => {
       date: selectedSlot.date,
       time: selectedSlot.time,
       categories: newCategories,
-      facultyId: user.id
+      facultyId: id
     }));
     
     setSelectedSlot({
