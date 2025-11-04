@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { useSelector } from 'react-redux';
+import { Provider, useSelector } from 'react-redux';
 import store, { persistor, useClearOnTabClose } from './store/store';
 import Login from './components/auth/Login';
 import ScholarRegister from './components/auth/ScholarRegister';

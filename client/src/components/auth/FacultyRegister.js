@@ -40,10 +40,6 @@ const FacultyRegister = () => {
     });
   };
 
-  const validateEmail = (email) => {
-    return email.endsWith('@nitc.ac.in');
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     dispatch(registerFaculty(formData));

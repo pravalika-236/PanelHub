@@ -1,16 +1,16 @@
-const express = require("express");
-const router = express.Router();
-const userController = require("../controllers/userControllers");
-const { protect } = require("../middleware/authMiddleware");
+import { Router } from "express";
+const userRouter = Router();
+import { registerScholar, registerFaculty, loginUser, getUserProfile, verifyToken, logoutUser } from "../controllers/userControllers.js";
+import { protect } from "../middleware/authMiddleware.js";
 
-router.post("/register/scholar", userController.registerScholar);
-router.post("/register/faculty", userController.registerFaculty);
-router.post("/login", userController.loginUser);
+userRouter.post("/register/scholar", registerScholar);
+userRouter.post("/register/faculty", registerFaculty);
+userRouter.post("/login", loginUser);
 
-router.get("/:id", protect, userController.getUserProfile);
+userRouter.get("/:id", protect, getUserProfile);
 
-router.post("/verify-token", userController.verifyToken);
+userRouter.post("/verify-token", verifyToken);
 
-router.post("/logout", userController.logoutUser);
+userRouter.post("/logout", logoutUser);
 
-module.exports = router;
+export default userRouter;

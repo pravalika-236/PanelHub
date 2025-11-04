@@ -116,7 +116,7 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.id = null;
         state.loading = false;
-        state.error = action.payload.data.message;
+        state.error = action.payload.message;
       })
 
       // Register Scholar
@@ -146,10 +146,6 @@ const authSlice = createSlice({
       .addCase(registerFaculty.fulfilled, (state, action) => {
         state.loading = false;
         state.success = action.payload.message;
-        state.authToken = action.payload.token;
-        state.userName = action.payload.user.name;
-        state.email = action.payload.user.email;
-        state.role = action.payload.user.role;
         state.error = null;
       })
       .addCase(registerFaculty.rejected, (state, action) => {
