@@ -20,15 +20,14 @@ const fetchUserProfile = async (id, token) => {
 
 const BookSlot = () => {
   const dispatch = useDispatch();
-  const auth = useSelector(state => state.auth); // 🧩 modified — take whole auth state
+  const auth = useSelector(state => state.auth);
   const { availableSlots, hasActiveBooking, loading, error, success } = useSelector(state => state.booking);
 
   const [selectedFaculties, setSelectedFaculties] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [facultyData, setFacultyData] = useState([]); 
-  const [userDept, setUserDept] = useState(null); // ✅ added — track department locally
+  const [userDept, setUserDept] = useState(null);
 
-  // ✅ modified — fetch department if missing, then faculties
   useEffect(() => {
     const loadFaculties = async () => {
       console.log("🧠 useEffect triggered. user =", auth);
@@ -57,13 +56,17 @@ const BookSlot = () => {
 
       try {
         console.log("📡 Fetching faculties for:", department);
+        // 🔧 unified backend route handling: works with either {faculties: [...]} or array
         const res = await axios.get(`http://localhost:5000/api/faculty/faculty?department=${department}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const fetchedFaculties = Array.isArray(res.data)
-          ? res.data
-          : res.data.faculties || [];
+        const fetchedFaculties =
+          Array.isArray(res.data)
+            ? res.data
+            : Array.isArray(res.data.faculties)
+            ? res.data.faculties
+            : [];
 
         setFacultyData(fetchedFaculties);
         console.log("✅ Faculties fetched:", fetchedFaculties);
@@ -72,10 +75,10 @@ const BookSlot = () => {
       }
     };
 
-    loadFaculties();
-  }, [auth]); // 🧩 modified dependency
+    // 🔧 prevent infinite loop — only refetch when auth.id or auth.department changes
+    if (auth.id) loadFaculties();
+  }, [auth.id, auth.department]); // 🔧 simplified dependency array
 
-  // ✅ changed — now uses local userDept as fallback
   const departmentFaculties = userDept
     ? facultyData.filter(faculty => faculty.department === userDept)
     : [];
@@ -99,7 +102,7 @@ const BookSlot = () => {
     dispatch(searchAvailableSlots({
       faculties: selectedFaculties,
       date: selectedDate,
-      department: userDept, // ✅ changed
+      department: userDept,
     }));
   };
 
@@ -110,7 +113,7 @@ const BookSlot = () => {
       date: selectedDate,
       time: availableSlots.find(slot => slot.id === slotId)?.time,
       userId: auth.id,
-      department: userDept, // ✅ changed
+      department: userDept,
       courseCategory: auth.courseCategory,
     }));
   };

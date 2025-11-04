@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-require("./Faculty"); // ✅ ensures Faculty model is registered
+require("./Faculty"); // ensures Faculty model is registered
 
 // ===== Slot schema for each time block =====
 const slotSchema = new mongoose.Schema(
@@ -39,6 +39,8 @@ const facultyFreeSlotSchema = new mongoose.Schema(
       ref: "Faculty",
       required: true,
     },
+    // ✅ Backward compatible: your rich Map-based structure
+    //    can be interpreted safely by older code expecting a plain Object
     freeSlot: {
       type: Map,
       of: daySchema,
