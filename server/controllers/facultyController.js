@@ -1,6 +1,8 @@
 import Faculty from "../models/Faculty.js";
 import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
 import { createDefaultFacultyFreeSlots } from "../utils/supportFunctions.js";
+import asyncHandler from "express-async-handler";
+import User from "../models/User.js";
 
 /* -------------------------------------------------------------------------- */
 /*                              SLOT MANAGEMENT                               */
@@ -79,13 +81,16 @@ export async function getFacultySlot(req, res) {
 
 export async function getAllFaculties(req, res) {
   try {
-    const department = (req.user && req.user.department) || req.query.department;
+    const department =
+      (req.user && req.user.department) || req.query.department;
     if (!department) {
       return res.status(400).json({ message: "Department is required" });
     }
 
     // ✅ Fetch faculty records filtered by department
-    const faculties = await Faculty.find({ department }).select("name email department");
+    const faculties = await Faculty.find({ department }).select(
+      "name email department"
+    );
 
     res.json({ faculties });
   } catch (err) {
@@ -117,79 +122,91 @@ export async function approveBooking(req, res) {
   }
 }
 
-export const getCommonSlots = async (req, res) => {
+// 🧩 VERSION 3.2 — fixed for { facultyIds, date, batch }
+export const getCommonSlots = asyncHandler(async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Not authorized, user missing" });
+    // ✅ 1. Verify authentication
+    const tokenUser = req.user;
+    if (!tokenUser) {
+      return res.status(401).json({ message: "Not authorized, no token" });
     }
 
-    const userBatch = req.user.courseCategory; // UG, PG, PhD
-    console.log("🧩 userBatch:", userBatch);
-
-    if (!userBatch) {
-      return res.status(400).json({ message: "User courseCategory (batch) not found" });
+    // ✅ 2. Extract correct fields from frontend
+    const { facultyIds, date, batch } = req.body;
+    if (!facultyIds || facultyIds.length === 0 || !date) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const { facultyIds } = req.body;
-    if (!facultyIds || !facultyIds.length) {
-      return res.status(400).json({ message: "Faculty IDs are required" });
+    // ✅ 3. Fetch user (optional, just for validation)
+    const user = await User.findById(tokenUser.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
 
-    const facultySlots = await FacultyFreeSlot.find({
+    const finalBatch = batch || user.courseCategory || "UG";
+
+    // ✅ 4. Load FacultyFreeSlot documents
+    const freeSlotsDocs = await FacultyFreeSlot.find({
       facultyId: { $in: facultyIds },
-    }).lean();
-
-    if (!facultySlots.length) {
-      return res.status(404).json({ message: "No faculty slots found" });
-    }
-
-    // 🧩 Normalize all freeSlot data
-    const allDays = facultySlots.map((record) => {
-      if (!record.freeSlot) return {};
-      try {
-        return record.freeSlot instanceof Map
-          ? Object.fromEntries(record.freeSlot)
-          : typeof record.freeSlot.toJSON === "function"
-          ? record.freeSlot.toJSON()
-          : JSON.parse(JSON.stringify(record.freeSlot));
-      } catch {
-        return {};
-      }
     });
 
-    console.log("🧩 allDays:", JSON.stringify(allDays, null, 2));
+    console.log("🧩 Found docs count:", freeSlotsDocs.length);
 
-    const allDayKeys = [...new Set(allDays.flatMap((d) => Object.keys(d || {})))];
-    const commonSlots = [];
+    // ✅ 5. Extract free blocks per faculty for that date (array-based freeSlot structure)
+    const facultyBlocks = freeSlotsDocs.map((doc) => {
+      // Defensive parse: freeSlot might be Map or plain object
+      const freeSlotData =
+        doc.freeSlot instanceof Map
+          ? Object.fromEntries(doc.freeSlot)
+          : doc.freeSlot;
 
-    for (const day of allDayKeys) {
-      const firstFaculty = allDays[0][day] || {};
-      const timeBlocks = Object.keys(firstFaculty);
-      const blocks = [];
+      // Grab the date’s object (ex: { "09-10": ["UG", "PG"], ... })
+      const dayData = freeSlotData?.[date];
 
-      for (const block of timeBlocks) {
-        // ✅ Each faculty's slot for this day/block must include the userBatch in its array
-        const isCommon = allDays.every(
-          (faculty) =>
-            faculty[day] &&
-            Array.isArray(faculty[day][block]) &&
-            faculty[day][block].includes(userBatch)
-        );
-
-        if (isCommon) blocks.push(block);
+      if (!dayData || typeof dayData !== "object") {
+        console.log("⚠️ No slot data for date in", doc.facultyId.toString());
+        return [];
       }
 
-      commonSlots.push({ day, blocks });
-    }
+      // For this faculty, find all blocks where the batch is included
+      const blocks = Object.entries(dayData)
+        .filter(([_, arr]) => Array.isArray(arr) && arr.includes(finalBatch))
+        .map(([block]) => block);
 
-    res.json({
+      console.log("📘 Faculty:", doc.facultyId.toString(), "=>", blocks);
+      return blocks;
+    });
+
+    console.log("🧩 facultyBlocks:", facultyBlocks);
+
+    // ✅ 6. Find intersection
+    const commonBlocks =
+      facultyBlocks.length > 0
+        ? facultyBlocks.reduce((a, b) => a.filter((x) => b.includes(x)))
+        : [];
+
+    console.log("✅ Common Blocks Found:", commonBlocks);
+
+    // ✅ 7. Respond
+    return res.json({
+      version: "3.2",
       message: "Common slots found successfully",
-      batch: userBatch,
-      totalDays: commonSlots.length,
-      commonSlots,
+      date,
+      batch: finalBatch,
+      totalFaculties: facultyIds.length,
+      totalCommonBlocks: commonBlocks.length,
+      commonSlots: [
+        {
+          day: date,
+          blocks: commonBlocks,
+        },
+      ],
     });
   } catch (error) {
-    console.error("❌ getCommonSlots error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("❌ Error in getCommonSlots (v3.2):", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
   }
-};
+});

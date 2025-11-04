@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react'; 
-import { useSelector, useDispatch } from 'react-redux';
-import { searchAvailableSlots, bookPresentationSlot, clearSlots, clearError, clearSuccess } from '../../store/slices/bookingSlice';
-import Loader from '../common/Loader';
-import Select from 'react-select';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  searchAvailableSlots,
+  bookPresentationSlot,
+  clearSlots,
+  clearError,
+  clearSuccess,
+} from "../../store/slices/bookingSlice";
+import Loader from "../common/Loader";
+import Select from "react-select";
+import axios from "axios";
 
 // ✅ added — helper function to fetch full user profile when department missing
 const fetchUserProfile = async (id, token) => {
@@ -20,12 +26,13 @@ const fetchUserProfile = async (id, token) => {
 
 const BookSlot = () => {
   const dispatch = useDispatch();
-  const auth = useSelector(state => state.auth);
-  const { availableSlots, hasActiveBooking, loading, error, success } = useSelector(state => state.booking);
+  const auth = useSelector((state) => state.auth);
+  const { availableSlots, hasActiveBooking, loading, error, success } =
+    useSelector((state) => state.booking);
 
   const [selectedFaculties, setSelectedFaculties] = useState([]);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [facultyData, setFacultyData] = useState([]); 
+  const [selectedDate, setSelectedDate] = useState("");
+  const [facultyData, setFacultyData] = useState([]);
   const [userDept, setUserDept] = useState(null);
 
   useEffect(() => {
@@ -45,7 +52,10 @@ const BookSlot = () => {
         if (profile?.department) {
           department = profile.department;
           setUserDept(profile.department);
-          console.log("✅ Department fetched from profile:", profile.department);
+          console.log(
+            "✅ Department fetched from profile:",
+            profile.department
+          );
         } else {
           console.warn("❌ Still no department found, skipping fetch");
           return;
@@ -57,16 +67,18 @@ const BookSlot = () => {
       try {
         console.log("📡 Fetching faculties for:", department);
         // 🔧 unified backend route handling: works with either {faculties: [...]} or array
-        const res = await axios.get(`http://localhost:5000/api/faculty/faculty?department=${department}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `http://localhost:5000/api/faculty/faculty?department=${department}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
-        const fetchedFaculties =
-          Array.isArray(res.data)
-            ? res.data
-            : Array.isArray(res.data.faculties)
-            ? res.data.faculties
-            : [];
+        const fetchedFaculties = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data.faculties)
+          ? res.data.faculties
+          : [];
 
         setFacultyData(fetchedFaculties);
         console.log("✅ Faculties fetched:", fetchedFaculties);
@@ -80,42 +92,104 @@ const BookSlot = () => {
   }, [auth.id, auth.department]); // 🔧 simplified dependency array
 
   const departmentFaculties = userDept
-    ? facultyData.filter(faculty => faculty.department === userDept)
+    ? facultyData.filter((faculty) => faculty.department === userDept)
     : [];
 
   const handleFacultyChange = (facultyId) => {
-    const faculty = departmentFaculties.find(f => f._id === facultyId || f.id === facultyId);
-    if (selectedFaculties.find(f => f._id === facultyId || f.id === facultyId)) {
-      setSelectedFaculties(selectedFaculties.filter(f => f._id !== facultyId && f.id !== facultyId));
+    const faculty = departmentFaculties.find(
+      (f) => f._id === facultyId || f.id === facultyId
+    );
+    if (
+      selectedFaculties.find((f) => f._id === facultyId || f.id === facultyId)
+    ) {
+      setSelectedFaculties(
+        selectedFaculties.filter(
+          (f) => f._id !== facultyId && f.id !== facultyId
+        )
+      );
     } else if (selectedFaculties.length < 3) {
       setSelectedFaculties([...selectedFaculties, faculty]);
     }
   };
 
+  // REPLACE your current handleSearchSlots with this (minimal change).
   const handleSearchSlots = async () => {
-    if (selectedFaculties.length === 0 || !selectedDate) {
+    if (selectedFaculties.length === 0) {
+      dispatch(clearError());
+      dispatch(clearSuccess());
+      return;
+    }
+    if (!selectedDate) {
       dispatch(clearError());
       dispatch(clearSuccess());
       return;
     }
 
-    dispatch(searchAvailableSlots({
-      faculties: selectedFaculties,
-      date: selectedDate,
-      department: userDept,
-    }));
+    const token = auth.authToken || localStorage.getItem("token"); // ensure token exists
+
+    try {
+      // POST body matches server expectation: facultyIds and date
+      const res = await axios.post(
+        "http://localhost:5000/api/faculty/common-slots",
+        {
+          facultyIds: selectedFaculties.map((f) => f._id || f.id),
+          date: selectedDate,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("✅ Common slots response:", res.data);
+
+      // Transform backend response -> front-end "availableSlots" format
+      // backend returns commonSlots: [{ day, blocks: ['09-10', ...] }]
+      const transformedSlots = res.data.commonSlots.flatMap((dayObj) =>
+        dayObj.blocks.map((block) => ({
+          id: `${dayObj.day}-${block}`,
+          time: `${block}`, // keep time as block (UI shows slot.time)
+          day: dayObj.day, // optional useful info
+        }))
+      );
+
+      dispatch(clearError());
+      dispatch(clearSuccess());
+
+      if (transformedSlots.length > 0) {
+        dispatch({
+          type: "booking/searchAvailableSlots/fulfilled",
+          payload: transformedSlots,
+        });
+      } else {
+        dispatch({
+          type: "booking/searchAvailableSlots/rejected",
+          error: { message: "No common slots available" },
+        });
+      }
+    } catch (err) {
+      console.error("❌ Error fetching common slots:", err);
+      dispatch({
+        type: "booking/searchAvailableSlots/rejected",
+        error: {
+          message:
+            err.response?.data?.message || "Failed to fetch common slots",
+        },
+      });
+    }
   };
 
   const handleBookSlot = async (slotId) => {
-    dispatch(bookPresentationSlot({
-      slotId,
-      faculties: selectedFaculties,
-      date: selectedDate,
-      time: availableSlots.find(slot => slot.id === slotId)?.time,
-      userId: auth.id,
-      department: userDept,
-      courseCategory: auth.courseCategory,
-    }));
+    dispatch(
+      bookPresentationSlot({
+        slotId,
+        faculties: selectedFaculties,
+        date: selectedDate,
+        time: availableSlots.find((slot) => slot.id === slotId)?.time,
+        userId: auth.id,
+        department: userDept,
+        courseCategory: auth.courseCategory,
+      })
+    );
   };
 
   return (
@@ -123,42 +197,42 @@ const BookSlot = () => {
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Book Presentation Slot</h2>
-          <p style={{ color: '#666', margin: 0 }}>
-            Select faculty members and find available slots for your presentation
+          <p style={{ color: "#666", margin: 0 }}>
+            Select faculty members and find available slots for your
+            presentation
           </p>
         </div>
 
         {hasActiveBooking && (
           <div className="alert alert-warning">
-            <strong>Warning:</strong> You already have an active booking. Please manage your existing booking first.
+            <strong>Warning:</strong> You already have an active booking. Please
+            manage your existing booking first.
           </div>
         )}
 
-        {error && (
-          <div className="alert alert-danger">{error}</div>
-        )}
+        {error && <div className="alert alert-danger">{error}</div>}
 
-        {success && (
-          <div className="alert alert-success">{success}</div>
-        )}
+        {success && <div className="alert alert-success">{success}</div>}
 
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+        <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
           <div style={{ flex: 1 }}>
             <label className="form-label">Select Faculty Members (Max 3)</label>
             <Select
               isMulti
-              options={departmentFaculties.map(faculty => ({
+              options={departmentFaculties.map((faculty) => ({
                 value: faculty._id || faculty.id,
                 label: `${faculty.name} (${faculty.email})`,
               }))}
-              value={selectedFaculties.map(f => ({
+              value={selectedFaculties.map((f) => ({
                 value: f._id || f.id,
                 label: `${f.name} (${f.email})`,
               }))}
               onChange={(selectedOptions) => {
                 if (selectedOptions.length <= 3) {
-                  const selected = selectedOptions.map(opt =>
-                    departmentFaculties.find(f => f._id === opt.value || f.id === opt.value)
+                  const selected = selectedOptions.map((opt) =>
+                    departmentFaculties.find(
+                      (f) => f._id === opt.value || f.id === opt.value
+                    )
                   );
                   setSelectedFaculties(selected);
                 }
@@ -166,18 +240,18 @@ const BookSlot = () => {
               styles={{
                 control: (provided) => ({
                   ...provided,
-                  border: '1px solid #ddd',
-                  borderRadius: '5px',
-                  minHeight: '45px',
+                  border: "1px solid #ddd",
+                  borderRadius: "5px",
+                  minHeight: "45px",
                 }),
                 multiValue: (provided) => ({
                   ...provided,
-                  backgroundColor: '#e9ecef',
+                  backgroundColor: "#e9ecef",
                 }),
               }}
               placeholder="Select up to 3 faculty members"
             />
-            <small style={{ color: '#666' }}>
+            <small style={{ color: "#666" }}>
               Selected: {selectedFaculties.length}/3
             </small>
           </div>
@@ -189,7 +263,7 @@ const BookSlot = () => {
               className="form-control"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={new Date().toISOString().split("T")[0]}
             />
           </div>
         </div>
@@ -199,7 +273,7 @@ const BookSlot = () => {
           className="btn btn-primary"
           disabled={loading}
         >
-          {loading ? 'Searching...' : 'Search Available Slots'}
+          {loading ? "Searching..." : "Search Available Slots"}
         </button>
       </div>
 
@@ -209,28 +283,39 @@ const BookSlot = () => {
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Available Slots</h3>
-            <p style={{ color: '#666', margin: 0 }}>
+            <p style={{ color: "#666", margin: 0 }}>
               Select a slot to book your presentation
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-            {availableSlots.map(slot => (
-              <div key={slot.id} style={{
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                padding: '20px',
-                textAlign: 'center',
-                backgroundColor: '#f9f9f9'
-              }}>
-                <h4 style={{ marginBottom: '10px', color: '#333' }}>{slot.time}</h4>
-                <p style={{ marginBottom: '15px', color: '#666' }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "15px",
+            }}
+          >
+            {availableSlots.map((slot) => (
+              <div
+                key={slot.id}
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  padding: "20px",
+                  textAlign: "center",
+                  backgroundColor: "#f9f9f9",
+                }}
+              >
+                <h4 style={{ marginBottom: "10px", color: "#333" }}>
+                  {slot.time}
+                </h4>
+                <p style={{ marginBottom: "15px", color: "#666" }}>
                   Duration: 1 hour
                 </p>
                 <button
                   onClick={() => handleBookSlot(slot.id)}
                   className="btn btn-success"
-                  style={{ width: '100%' }}
+                  style={{ width: "100%" }}
                 >
                   Book This Slot
                 </button>
@@ -238,10 +323,19 @@ const BookSlot = () => {
             ))}
           </div>
 
-          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
-            <h4 style={{ fontSize: '14px', marginBottom: '10px' }}>Selected Panel:</h4>
-            <ul style={{ margin: 0, paddingLeft: '20px' }}>
-              {selectedFaculties.map(faculty => (
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "15px",
+              backgroundColor: "#e9ecef",
+              borderRadius: "5px",
+            }}
+          >
+            <h4 style={{ fontSize: "14px", marginBottom: "10px" }}>
+              Selected Panel:
+            </h4>
+            <ul style={{ margin: 0, paddingLeft: "20px" }}>
+              {selectedFaculties.map((faculty) => (
                 <li key={faculty._id || faculty.id}>{faculty.name}</li>
               ))}
             </ul>
@@ -252,8 +346,9 @@ const BookSlot = () => {
       {availableSlots.length === 0 && !loading && selectedDate && (
         <div className="card">
           <div className="alert alert-warning">
-            <strong>No slots available</strong> for the selected date and faculty combination.
-            Please try selecting another date or different faculty members.
+            <strong>No slots available</strong> for the selected date and
+            faculty combination. Please try selecting another date or different
+            faculty members.
           </div>
         </div>
       )}
