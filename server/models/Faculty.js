@@ -1,16 +1,11 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-const facultySchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  department: String,
-  availableSlots: [
-    {
-      date: String,
-      time: String,
-      available: Boolean
-    }
-  ]
+const FacultySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  department: { type: String, required: true }, // e.g. "CSE", "ECE"
+  role: { type: String, default: "Faculty" },
+  createdAt: { type: Date, default: Date.now }
 });
 
-export default mongoose.model("Faculty", facultySchema);
+module.exports = mongoose.model("Faculty", FacultySchema);

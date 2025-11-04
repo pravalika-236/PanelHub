@@ -1,56 +1,61 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import FacultyFreeSlot from './models/FacultyFreeSlot.js';
-import Faculty from './models/Faculty.js';
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const connectDB = require("./config/db");
+const FacultyFreeSlot = require("./models/FacultyFreeSlot");
+const Faculty = require("./models/Faculty");
 
 dotenv.config();
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected for seeding'))
-  .catch(err => console.error(err));
-
-const seedSlots = async () => {
+const seedFacultySlots = async () => {
   try {
-    // Step 1: Find existing faculty
-    const faculties = await Faculty.find();
+    await connectDB();
 
-    if (faculties.length < 2) {
-      console.log('❌ Need at least 2 faculty documents to test common slots.');
-      console.log('Please insert them into your Faculty collection first.');
-      process.exit(0);
+    // Clear old data
+    await FacultyFreeSlot.deleteMany();
+    await Faculty.deleteMany();
+
+    // Create sample faculty documents
+    const facultySamples = await Faculty.insertMany([
+      { name: "Dr. Smith", email: "smith@nitc.ac.in", department: "CSE" },
+      { name: "Dr. Johnson", email: "johnson@nitc.ac.in", department: "CSE" },
+      { name: "Dr. Brown", email: "brown@nitc.ac.in", department: "ECE" },
+      { name: "Dr. Davis", email: "davis@nitc.ac.in", department: "ME" },
+      { name: "Dr. Miller", email: "miller@nitc.ac.in", department: "EEE" },
+      { name: "Dr. Taylor", email: "taylor@nitc.ac.in", department: "CSE" },
+      { name: "Dr. Anderson", email: "anderson@nitc.ac.in", department: "ECE" },
+      { name: "Dr. White", email: "white@nitc.ac.in", department: "ME" },
+      { name: "Dr. Green", email: "green@nitc.ac.in", department: "CE" },
+      { name: "Dr. Patel", email: "patel@nitc.ac.in", department: "EEE" },
+    ]);
+
+    // Prepare free slots for 3 days
+    const today = new Date();
+    const freeSlotData = {};
+    for (let i = 0; i < 3; i++) {
+      const dateKey = new Date(today.getTime() + i * 86400000)
+        .toISOString()
+        .split("T")[0];
+      freeSlotData[dateKey] = {
+        "09-10": ["UG", "PG"],
+        "10-11": ["UG"],
+        "11-12": ["PhD", "PG"],
+      };
     }
 
-    // Step 2: Define fake free slots for testing
-    const date = '2025-10-28';
-    const slotData = [
-      { "10-11": true, "11-12": true, "12-1": false },
-      { "10-11": true, "11-12": false, "12-1": true }
-    ];
+    // Create faculty free slots
+    const slotDocs = facultySamples.map((faculty) => ({
+      facultyId: faculty._id,
+      freeSlot: freeSlotData,
+    }));
 
-    // Step 3: Insert free slots for 2 faculties
-    await FacultyFreeSlot.deleteMany(); // Clear old data
+    await FacultyFreeSlot.insertMany(slotDocs);
 
-    const slot1 = new FacultyFreeSlot({
-      facultyId: faculties[0]._id,
-      freeSlot: { [date]: slotData[0] }
-    });
-
-    const slot2 = new FacultyFreeSlot({
-      facultyId: faculties[1]._id,
-      freeSlot: { [date]: slotData[1] }
-    });
-
-    await slot1.save();
-    await slot2.save();
-
-    console.log('✅ Seed data added successfully!');
-    console.log('Faculty IDs used:', faculties[0]._id.toString(), faculties[1]._id.toString());
-    process.exit(0);
-  } catch (err) {
-    console.error('Seeding error:', err);
+    console.log("✅ Faculty and free slots seeded successfully!");
+    process.exit();
+  } catch (error) {
+    console.error("❌ Seeding failed:", error.message);
     process.exit(1);
   }
 };
 
-seedSlots();
+seedFacultySlots();

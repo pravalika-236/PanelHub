@@ -1,60 +1,96 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { useSelector, useDispatch } from 'react-redux';
 import { searchAvailableSlots, bookPresentationSlot, clearSlots, clearError, clearSuccess } from '../../store/slices/bookingSlice';
 import Loader from '../common/Loader';
 import Select from 'react-select';
+import axios from 'axios';
+
+// ✅ added — helper function to fetch full user profile when department missing
+const fetchUserProfile = async (id, token) => {
+  try {
+    const res = await axios.get(`http://localhost:5000/api/users/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data;
+  } catch (err) {
+    console.error("❌ Failed to fetch user profile:", err.message);
+    return null;
+  }
+};
 
 const BookSlot = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector(state => state.auth);
+  const auth = useSelector(state => state.auth); // 🧩 modified — take whole auth state
   const { availableSlots, hasActiveBooking, loading, error, success } = useSelector(state => state.booking);
 
   const [selectedFaculties, setSelectedFaculties] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
+  const [facultyData, setFacultyData] = useState([]); 
+  const [userDept, setUserDept] = useState(null); // ✅ added — track department locally
 
-  // Enhanced faculty data with more names
-  const facultyData = [
-    { id: 1, name: 'Dr. Smith', email: 'smith@nitc.ac.in', department: 'CSE' },
-    { id: 2, name: 'Dr. Johnson', email: 'johnson@nitc.ac.in', department: 'CSE' },
-    { id: 3, name: 'Dr. Brown', email: 'brown@nitc.ac.in', department: 'ECE' },
-    { id: 4, name: 'Dr. Wilson', email: 'wilson@nitc.ac.in', department: 'ECE' },
-    { id: 5, name: 'Dr. Davis', email: 'davis@nitc.ac.in', department: 'ME' },
-    { id: 6, name: 'Dr. Miller', email: 'miller@nitc.ac.in', department: 'EEE' },
-    { id: 7, name: 'Dr. Taylor', email: 'taylor@nitc.ac.in', department: 'CSE' },
-    { id: 8, name: 'Dr. Anderson', email: 'anderson@nitc.ac.in', department: 'ECE' },
-    { id: 9, name: 'Dr. White', email: 'white@nitc.ac.in', department: 'ME' },
-    { id: 10, name: 'Dr. Black', email: 'black@nitc.ac.in', department: 'EEE' },
-    { id: 11, name: 'Dr. Green', email: 'green@nitc.ac.in', department: 'CE' },
-    { id: 12, name: 'Dr. Lee', email: 'lee@nitc.ac.in', department: 'CSE' },
-    { id: 13, name: 'Dr. Kumar', email: 'kumar@nitc.ac.in', department: 'ECE' },
-    { id: 14, name: 'Dr. Patel', email: 'patel@nitc.ac.in', department: 'ME' },
-    { id: 15, name: 'Dr. Singh', email: 'singh@nitc.ac.in', department: 'EEE' },
-    { id: 16, name: 'Dr. Sharma', email: 'sharma@nitc.ac.in', department: 'CE' },
-    { id: 17, name: 'Dr. Gupta', email: 'gupta@nitc.ac.in', department: 'CSE' },
-    { id: 18, name: 'Dr. Reddy', email: 'reddy@nitc.ac.in', department: 'ECE' }
-  ];
+  // ✅ modified — fetch department if missing, then faculties
+  useEffect(() => {
+    const loadFaculties = async () => {
+      console.log("🧠 useEffect triggered. user =", auth);
 
-  // Filter faculties by user's department
-  const departmentFaculties = facultyData.filter(faculty => faculty.department === user.department);
+      const token = auth.authToken || localStorage.getItem("token");
+      if (!auth.id || !token) {
+        console.warn("⚠️ User or token missing, skipping fetch");
+        return;
+      }
+
+      let department = auth.department;
+      if (!department) {
+        console.warn("⚠️ No department in Redux, fetching profile...");
+        const profile = await fetchUserProfile(auth.id, token);
+        if (profile?.department) {
+          department = profile.department;
+          setUserDept(profile.department);
+          console.log("✅ Department fetched from profile:", profile.department);
+        } else {
+          console.warn("❌ Still no department found, skipping fetch");
+          return;
+        }
+      } else {
+        setUserDept(department);
+      }
+
+      try {
+        console.log("📡 Fetching faculties for:", department);
+        const res = await axios.get(`http://localhost:5000/api/faculty/faculty?department=${department}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const fetchedFaculties = Array.isArray(res.data)
+          ? res.data
+          : res.data.faculties || [];
+
+        setFacultyData(fetchedFaculties);
+        console.log("✅ Faculties fetched:", fetchedFaculties);
+      } catch (err) {
+        console.error("❌ Failed to fetch faculties:", err.message);
+      }
+    };
+
+    loadFaculties();
+  }, [auth]); // 🧩 modified dependency
+
+  // ✅ changed — now uses local userDept as fallback
+  const departmentFaculties = userDept
+    ? facultyData.filter(faculty => faculty.department === userDept)
+    : [];
 
   const handleFacultyChange = (facultyId) => {
-    const faculty = departmentFaculties.find(f => f.id === facultyId);
-    if (selectedFaculties.find(f => f.id === facultyId)) {
-      setSelectedFaculties(selectedFaculties.filter(f => f.id !== facultyId));
+    const faculty = departmentFaculties.find(f => f._id === facultyId || f.id === facultyId);
+    if (selectedFaculties.find(f => f._id === facultyId || f.id === facultyId)) {
+      setSelectedFaculties(selectedFaculties.filter(f => f._id !== facultyId && f.id !== facultyId));
     } else if (selectedFaculties.length < 3) {
       setSelectedFaculties([...selectedFaculties, faculty]);
-    } else {
-      //   setError('You can select maximum 3 faculties');
     }
   };
 
   const handleSearchSlots = async () => {
-    if (selectedFaculties.length === 0) {
-      dispatch(clearError());
-      dispatch(clearSuccess());
-      return;
-    }
-    if (!selectedDate) {
+    if (selectedFaculties.length === 0 || !selectedDate) {
       dispatch(clearError());
       dispatch(clearSuccess());
       return;
@@ -63,7 +99,7 @@ const BookSlot = () => {
     dispatch(searchAvailableSlots({
       faculties: selectedFaculties,
       date: selectedDate,
-      department: user.department
+      department: userDept, // ✅ changed
     }));
   };
 
@@ -73,9 +109,9 @@ const BookSlot = () => {
       faculties: selectedFaculties,
       date: selectedDate,
       time: availableSlots.find(slot => slot.id === slotId)?.time,
-      userId: user.id,
-      department: user.department,
-      courseCategory: user.courseCategory
+      userId: auth.id,
+      department: userDept, // ✅ changed
+      courseCategory: auth.courseCategory,
     }));
   };
 
@@ -109,17 +145,17 @@ const BookSlot = () => {
             <Select
               isMulti
               options={departmentFaculties.map(faculty => ({
-                value: faculty.id,
+                value: faculty._id || faculty.id,
                 label: `${faculty.name} (${faculty.email})`,
               }))}
               value={selectedFaculties.map(f => ({
-                value: f.id,
+                value: f._id || f.id,
                 label: `${f.name} (${f.email})`,
               }))}
               onChange={(selectedOptions) => {
                 if (selectedOptions.length <= 3) {
                   const selected = selectedOptions.map(opt =>
-                    departmentFaculties.find(f => f.id === opt.value)
+                    departmentFaculties.find(f => f._id === opt.value || f.id === opt.value)
                   );
                   setSelectedFaculties(selected);
                 }
@@ -203,7 +239,7 @@ const BookSlot = () => {
             <h4 style={{ fontSize: '14px', marginBottom: '10px' }}>Selected Panel:</h4>
             <ul style={{ margin: 0, paddingLeft: '20px' }}>
               {selectedFaculties.map(faculty => (
-                <li key={faculty.id}>{faculty.name}</li>
+                <li key={faculty._id || faculty.id}>{faculty.name}</li>
               ))}
             </ul>
           </div>
