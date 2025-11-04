@@ -53,6 +53,16 @@ router.get("/faculty", protect, async (req, res) => {
   }
 });
 
+
+/* -------------------------------------------------------------------------- */
+/*                     FACULTY BOOKING & COMMON SLOT APIs                     */
+/* -------------------------------------------------------------------------- */
+
+router.get("/confirmed", getConfirmedBookings);
+router.post("/approve", approveBooking);
+router.post('/common-slots', protect, getCommonSlots);
+
+
 /* -------------------------------------------------------------------------- */
 /*                          FACULTY SLOT MANAGEMENT                           */
 /* -------------------------------------------------------------------------- */
@@ -76,12 +86,6 @@ router.get("/:facultyId", async (req, res, next) => {
   }
 }, getFacultySlot);
 
-/* -------------------------------------------------------------------------- */
-/*                     FACULTY BOOKING & COMMON SLOT APIs                     */
-/* -------------------------------------------------------------------------- */
 
-router.get("/confirmed", getConfirmedBookings);
-router.post("/approve", approveBooking);
-router.post("/common-slots", getCommonSlots);
 
 export default router;

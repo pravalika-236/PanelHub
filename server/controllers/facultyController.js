@@ -117,11 +117,79 @@ export async function approveBooking(req, res) {
   }
 }
 
-export async function getCommonSlots(req, res) {
+export const getCommonSlots = async (req, res) => {
   try {
-    // 🔸 Upstream logic placeholder
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized, user missing" });
+    }
+
+    const userBatch = req.user.courseCategory; // UG, PG, PhD
+    console.log("🧩 userBatch:", userBatch);
+
+    if (!userBatch) {
+      return res.status(400).json({ message: "User courseCategory (batch) not found" });
+    }
+
+    const { facultyIds } = req.body;
+    if (!facultyIds || !facultyIds.length) {
+      return res.status(400).json({ message: "Faculty IDs are required" });
+    }
+
+    const facultySlots = await FacultyFreeSlot.find({
+      facultyId: { $in: facultyIds },
+    }).lean();
+
+    if (!facultySlots.length) {
+      return res.status(404).json({ message: "No faculty slots found" });
+    }
+
+    // 🧩 Normalize all freeSlot data
+    const allDays = facultySlots.map((record) => {
+      if (!record.freeSlot) return {};
+      try {
+        return record.freeSlot instanceof Map
+          ? Object.fromEntries(record.freeSlot)
+          : typeof record.freeSlot.toJSON === "function"
+          ? record.freeSlot.toJSON()
+          : JSON.parse(JSON.stringify(record.freeSlot));
+      } catch {
+        return {};
+      }
+    });
+
+    console.log("🧩 allDays:", JSON.stringify(allDays, null, 2));
+
+    const allDayKeys = [...new Set(allDays.flatMap((d) => Object.keys(d || {})))];
+    const commonSlots = [];
+
+    for (const day of allDayKeys) {
+      const firstFaculty = allDays[0][day] || {};
+      const timeBlocks = Object.keys(firstFaculty);
+      const blocks = [];
+
+      for (const block of timeBlocks) {
+        // ✅ Each faculty's slot for this day/block must include the userBatch in its array
+        const isCommon = allDays.every(
+          (faculty) =>
+            faculty[day] &&
+            Array.isArray(faculty[day][block]) &&
+            faculty[day][block].includes(userBatch)
+        );
+
+        if (isCommon) blocks.push(block);
+      }
+
+      commonSlots.push({ day, blocks });
+    }
+
+    res.json({
+      message: "Common slots found successfully",
+      batch: userBatch,
+      totalDays: commonSlots.length,
+      commonSlots,
+    });
   } catch (error) {
-    console.error("❌ getCommonSlots:", error);
-    res.status(500).json({ message: "Error fetching common slots" });
+    console.error("❌ getCommonSlots error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
-}
+};
