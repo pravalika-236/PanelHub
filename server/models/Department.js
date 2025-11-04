@@ -1,11 +1,11 @@
-const mongoose = require("mongoose");
+import { Schema, model } from "mongoose";
 
-const departmentSchema = new mongoose.Schema({
+const departmentSchema = new Schema({
   name: {
     type: String,
     required: true,
-    enum: ["CSE", "EEE", "ECE", "ME", "CE"], // only these values are allowed
+    enum: ["CSE", "EEE", "ECE", "ME", "CE"],
   },
 });
 
-module.exports = mongoose.model("Department", departmentSchema);
+export default model("Department", departmentSchema);

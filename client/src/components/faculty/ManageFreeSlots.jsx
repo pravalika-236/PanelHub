@@ -1,18 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchFacultyCalendar, updateCalendarSlot, clearError, clearSuccess } from '../../store/slices/facultySlice';
+import {
+  fetchFacultyCalendar,
+  clearSuccess,
+  updateFacultySlot
+} from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
+import {
+  formateDateToMMMDD,
+  formateDateToWWW,
+  formateTableDate,
+  getSlotColor,
+  getSlotText,
+  getWeekDates,
+  timeSlots
+} from '../utils/helperFunctions';
 
 const ManageFreeSlots = () => {
   const dispatch = useDispatch();
-  const { userName, id } = useSelector(state => state.auth);
-  const { calendar, loading, error, success } = useSelector(state => state.faculty);
-  
+  const { id } = useSelector(state => state.auth);
+  const { calendar, loading, success } = useSelector(state => state.faculty);
+
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [newCalender, setNewCalender] = useState(calendar || {});
 
   useEffect(() => {
-    dispatch(fetchFacultyCalendar(id));
+    setNewCalender(calendar || {});
+  }, [calendar]);
+
+  useEffect(() => {
+    if (id) {
+      dispatch(fetchFacultyCalendar(id));
+    }
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -22,82 +42,50 @@ const ManageFreeSlots = () => {
     }
   }, [success, dispatch]);
 
-  const timeSlots = [
-    '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM',
-    '6:00 PM', '7:00 PM', '8:00 PM'
-  ];
-
-  const courseCategories = ['UG', 'PG', 'PhD'];
-
-  const getWeekDates = () => {
-    const dates = [];
-    const today = new Date();
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date);
-    }
-    
-    return dates;
-  };
+  const courseCategories = ['UG', 'PG', 'PHD'];
 
   const handleSlotClick = (date, time) => {
-    const dateStr = date.toISOString().split('T')[0];
-    setSelectedSlot({ date: dateStr, time, data: calendar[dateStr]?.[time] || { UG: false, PG: false, PhD: false } });
+    setSelectedSlot({
+      date,
+      time,
+      data: { ...(newCalender[date]?.[time] || { UG: false, PG: false, PHD: false }) }
+    });
     setShowModal(true);
   };
 
   const handleCategoryToggle = (category) => {
-    if (!selectedSlot) return;
-    
-    const newCategories = {
-      ...selectedSlot.data,
-      [category]: !selectedSlot.data[category]
-    };
-    
-    dispatch(updateCalendarSlot({
-      date: selectedSlot.date,
-      time: selectedSlot.time,
-      categories: newCategories,
-      facultyId: id
+    setSelectedSlot(prev => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        [category]: !prev.data[category]
+      }
     }));
-    
-    setSelectedSlot({
-      ...selectedSlot,
-      data: newCategories
-    });
   };
 
-  const getSlotColor = (date, time) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const slot = calendar[dateStr]?.[time];
-    if (!slot) return '#f8f9fa';
-    
-    const categories = Object.values(slot).filter(Boolean);
-    if (categories.length === 0) return '#f8f9fa';
-    if (categories.length === 1) return '#d4edda';
-    if (categories.length === 2) return '#fff3cd';
-    return '#d1ecf1';
+  const handleSaveSlot = () => {
+    if (!selectedSlot) return;
+
+    const updatedCalender = structuredClone(newCalender);
+
+    if (!updatedCalender[selectedSlot.date]) {
+      updatedCalender[selectedSlot.date] = {};
+    }
+    updatedCalender[selectedSlot.date][selectedSlot.time] = { ...selectedSlot.data };
+
+    setNewCalender(updatedCalender);
+    setShowModal(false);
   };
 
-  const getSlotText = (date, time) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const slot = calendar[dateStr]?.[time];
-    if (!slot) return '';
-    
-    return Object.entries(slot)
-      .filter(([_, available]) => available)
-      .map(([category, _]) => category)
-      .join(', ');
-  };
+  const handleUpdateCalender = () => {
+    dispatch(updateFacultySlot({facultyId: id, calendarData: newCalender}));
+  }
 
   if (loading) {
     return <Loader message="Loading your calendar..." />;
   }
 
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(newCalender);
 
   return (
     <div>
@@ -110,42 +98,45 @@ const ManageFreeSlots = () => {
         </div>
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ 
-            width: '100%', 
-            borderCollapse: 'collapse',
-            minWidth: '800px'
-          }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f8f9fa' }}>
                 <th style={{ padding: '10px', border: '1px solid #ddd', minWidth: '100px' }}>Date</th>
                 {timeSlots.map(time => (
-                  <th key={time} style={{ padding: '10px', border: '1px solid #ddd', fontSize: '12px' }}>
-                    {time}
+                  <th
+                    key={time}
+                    style={{
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                      fontSize: '12px'
+                    }}
+                  >
+                    {formateTableDate(time)}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {weekDates.map(date => (
-                <tr key={date.toISOString()}>
-                  <td style={{ 
-                    padding: '10px', 
-                    border: '1px solid #ddd',
-                    backgroundColor: '#f8f9fa',
-                    fontWeight: 'bold'
-                  }}>
-                    <div>{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                    <div style={{ fontSize: '12px' }}>
-                      {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </div>
+                <tr key={date}>
+                  <td
+                    style={{
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                      backgroundColor: '#f8f9fa',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    <div>{formateDateToMMMDD(date)}</div>
+                    <div style={{ fontSize: '12px' }}>{formateDateToWWW(date)}</div>
                   </td>
                   {timeSlots.map(time => (
-                    <td 
+                    <td
                       key={time}
-                      style={{ 
-                        padding: '8px', 
+                      style={{
+                        padding: '8px',
                         border: '1px solid #ddd',
-                        backgroundColor: getSlotColor(date, time),
+                        backgroundColor: getSlotColor(date, time, newCalender),
                         cursor: 'pointer',
                         textAlign: 'center',
                         fontSize: '10px',
@@ -154,7 +145,7 @@ const ManageFreeSlots = () => {
                       }}
                       onClick={() => handleSlotClick(date, time)}
                     >
-                      {getSlotText(date, time)}
+                      {getSlotText(date, time, newCalender)}
                     </td>
                   ))}
                 </tr>
@@ -163,7 +154,35 @@ const ManageFreeSlots = () => {
           </table>
         </div>
 
-        <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
+        <div
+          className="card"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '15px',
+            marginBottom: '20px',
+            padding: '15px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '5px'
+          }}
+        >
+          <button
+            className="btn btn-primary"
+            style={{ width: '150px' }}
+            onClick={handleUpdateCalender}
+          >
+            Save
+          </button>
+        </div>
+
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '15px',
+            backgroundColor: '#e9ecef',
+            borderRadius: '5px'
+          }}
+        >
           <h4 style={{ fontSize: '14px', marginBottom: '10px' }}>Legend:</h4>
           <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -186,32 +205,38 @@ const ManageFreeSlots = () => {
         </div>
       </div>
 
+      {/* Modal */}
       {showModal && selectedSlot && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '10px',
-            maxWidth: '400px',
-            width: '90%'
-          }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '10px',
+              maxWidth: '400px',
+              width: '90%'
+            }}
+          >
             <h3 style={{ marginBottom: '20px' }}>Manage Free Time</h3>
             <p style={{ marginBottom: '20px', color: '#666' }}>
-              <strong>Date:</strong> {new Date(selectedSlot.date).toLocaleDateString()}<br />
+              <strong>Date:</strong> {selectedSlot.date}
+              <br />
               <strong>Time:</strong> {selectedSlot.time}
             </p>
-            
+
             <div style={{ marginBottom: '20px' }}>
               <h4 style={{ marginBottom: '15px' }}>Available for:</h4>
               {courseCategories.map(category => (
@@ -226,13 +251,13 @@ const ManageFreeSlots = () => {
                 </label>
               ))}
             </div>
-            
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowModal(false)}
-                className="btn btn-secondary"
-              >
-                Close
+              <button onClick={() => setShowModal(false)} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button onClick={handleSaveSlot} className="btn btn-primary">
+                Add Slot
               </button>
             </div>
           </div>

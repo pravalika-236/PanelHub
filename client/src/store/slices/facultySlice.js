@@ -1,10 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
 
 // Dummy API functions
 const dummyAPI = {
   getFacultyCalendar: async (facultyId) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const timeSlots = [
       '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
       '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM',
@@ -13,12 +14,12 @@ const dummyAPI = {
 
     const today = new Date();
     const weekData = {};
-    
+
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
-      
+
       weekData[dateStr] = {};
       timeSlots.forEach(time => {
         weekData[dateStr][time] = {
@@ -28,13 +29,13 @@ const dummyAPI = {
         };
       });
     }
-    
+
     return weekData;
   },
 
   updateFacultySlot: async (slotData) => {
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     return {
       success: true,
       message: 'Slot updated successfully!'
@@ -43,7 +44,7 @@ const dummyAPI = {
 
   getConfirmedBookings: async (facultyId) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const sampleBookings = [
       {
         id: 1,
@@ -93,14 +94,14 @@ const dummyAPI = {
     ];
 
     // Filter bookings where current faculty is involved
-    return sampleBookings.filter(booking => 
+    return sampleBookings.filter(booking =>
       booking.faculties.some(faculty => faculty.id === facultyId)
     );
   },
 
   getApprovedBookings: async (facultyId) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const sampleBookings = [
       {
         id: 1,
@@ -165,7 +166,7 @@ const dummyAPI = {
     ];
 
     // Filter bookings where current faculty has approved but others haven't
-    return sampleBookings.filter(booking => 
+    return sampleBookings.filter(booking =>
       booking.faculties.some(faculty => faculty.id === facultyId && faculty.approved) &&
       booking.faculties.some(faculty => !faculty.approved)
     );
@@ -173,7 +174,7 @@ const dummyAPI = {
 
   getUnapprovedBookings: async (facultyId) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const sampleBookings = [
       {
         id: 1,
@@ -253,14 +254,14 @@ const dummyAPI = {
     ];
 
     // Filter bookings where current faculty is involved but hasn't approved yet
-    return sampleBookings.filter(booking => 
+    return sampleBookings.filter(booking =>
       booking.faculties.some(faculty => faculty.id === facultyId && !faculty.approved)
     );
   },
 
   approveBooking: async (bookingId, facultyId) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     return {
       success: true,
       message: 'Booking approved successfully!'
@@ -269,7 +270,7 @@ const dummyAPI = {
 
   rejectBooking: async (bookingId, facultyId) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     return {
       success: true,
       message: 'Booking rejected successfully! All participants have been notified.'
@@ -278,7 +279,7 @@ const dummyAPI = {
 
   cancelFacultyBooking: async (bookingId, facultyId) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     return {
       success: true,
       message: 'Booking cancelled successfully! All participants have been notified.'
@@ -287,11 +288,28 @@ const dummyAPI = {
 };
 
 // Async thunks
+export const createFacultyCalendar = createAsyncThunk(
+  'faculty/fetchCalendar',
+  async (facultyId, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/api/faculty/${facultyId}`,
+      )
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+// Async thunks
 export const fetchFacultyCalendar = createAsyncThunk(
   'faculty/fetchCalendar',
   async (facultyId, { rejectWithValue }) => {
     try {
-      const response = await dummyAPI.getFacultyCalendar(facultyId);
+      const response = await axios.get(
+        `http://localhost:5000/api/faculty/${facultyId}`,
+      )
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -301,9 +319,13 @@ export const fetchFacultyCalendar = createAsyncThunk(
 
 export const updateFacultySlot = createAsyncThunk(
   'faculty/updateSlot',
-  async (slotData, { rejectWithValue }) => {
+  async ({ facultyId, calendarData }, { rejectWithValue }) => {
     try {
-      const response = await dummyAPI.updateFacultySlot(slotData);
+      const response = await axios.put(
+        `http://localhost:5000/api/faculty/${facultyId}`,
+        { freeSlot: calendarData },
+        { headers: { 'Content-Type': 'application/json' } }
+      )
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -418,7 +440,7 @@ const facultySlice = createSlice({
       })
       .addCase(fetchFacultyCalendar.fulfilled, (state, action) => {
         state.loading = false;
-        state.calendar = action.payload;
+        state.calendar = action.payload.data.freeSlot;
         state.error = null;
       })
       .addCase(fetchFacultyCalendar.rejected, (state, action) => {
