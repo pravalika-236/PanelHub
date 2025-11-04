@@ -3,10 +3,12 @@ import { useSelector, useDispatch } from "react-redux";
 import {
   searchAvailableSlots,
   bookPresentationSlot,
-  clearSlots,
   clearError,
   clearSuccess,
+  setAvailableSlots, // ✅ added
 } from "../../store/slices/bookingSlice";
+
+
 import Loader from "../common/Loader";
 import Select from "react-select";
 import axios from "axios";
@@ -112,71 +114,66 @@ const BookSlot = () => {
     }
   };
 
-  // REPLACE your current handleSearchSlots with this (minimal change).
-  const handleSearchSlots = async () => {
-    if (selectedFaculties.length === 0) {
-      dispatch(clearError());
-      dispatch(clearSuccess());
-      return;
-    }
-    if (!selectedDate) {
-      dispatch(clearError());
-      dispatch(clearSuccess());
-      return;
-    }
+  // REPLACE your current handleSearchSlots with this (minimal change)
+const handleSearchSlots = async () => {
+  if (selectedFaculties.length === 0 || !selectedDate) {
+    // ✅ simplified combined check
+    dispatch(clearError());
+    dispatch(clearSuccess());
+    return;
+  }
 
-    const token = auth.authToken || localStorage.getItem("token"); // ensure token exists
+  const token = auth.authToken || localStorage.getItem("token");
 
-    try {
-      // POST body matches server expectation: facultyIds and date
-      const res = await axios.post(
-        "http://localhost:5000/api/faculty/common-slots",
-        {
-          facultyIds: selectedFaculties.map((f) => f._id || f.id),
-          date: selectedDate,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      console.log("✅ Common slots response:", res.data);
-
-      // Transform backend response -> front-end "availableSlots" format
-      // backend returns commonSlots: [{ day, blocks: ['09-10', ...] }]
-      const transformedSlots = res.data.commonSlots.flatMap((dayObj) =>
-        dayObj.blocks.map((block) => ({
-          id: `${dayObj.day}-${block}`,
-          time: `${block}`, // keep time as block (UI shows slot.time)
-          day: dayObj.day, // optional useful info
-        }))
-      );
-
-      dispatch(clearError());
-      dispatch(clearSuccess());
-
-      if (transformedSlots.length > 0) {
-        dispatch({
-          type: "booking/searchAvailableSlots/fulfilled",
-          payload: transformedSlots,
-        });
-      } else {
-        dispatch({
-          type: "booking/searchAvailableSlots/rejected",
-          error: { message: "No common slots available" },
-        });
+  try {
+    // ✅ added batch (courseCategory) for backend context
+    const res = await axios.post(
+      "http://localhost:5000/api/faculty/common-slots",
+      {
+        facultyIds: selectedFaculties.map((f) => f._id || f.id),
+        date: selectedDate,
+        batch: auth.courseCategory || "UG", // ✅ change: dynamic batch support
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
       }
-    } catch (err) {
-      console.error("❌ Error fetching common slots:", err);
+    );
+
+    console.log("✅ Common slots response:", res.data);
+
+    // ✅ safer access with fallback to empty array
+    const transformedSlots =
+      res.data?.commonSlots?.flatMap((dayObj) =>
+        (dayObj.blocks || []).map((block) => ({
+          id: `${dayObj.day}-${block}`,
+          time: block,
+          day: dayObj.day,
+        }))
+      ) || [];
+
+    dispatch(clearError());
+    dispatch(clearSuccess());
+
+    if (transformedSlots.length > 0) {
+      dispatch(setAvailableSlots(transformedSlots)); // ✅ direct update to Redux state
+    } else {
       dispatch({
         type: "booking/searchAvailableSlots/rejected",
-        error: {
-          message:
-            err.response?.data?.message || "Failed to fetch common slots",
-        },
+        error: { message: "No common slots available" },
       });
     }
-  };
+  } catch (err) {
+    console.error("❌ Error fetching common slots:", err);
+    dispatch({
+      type: "booking/searchAvailableSlots/rejected",
+      error: {
+        message:
+          err.response?.data?.message || "Failed to fetch common slots",
+      },
+    });
+  }
+};
+
 
   const handleBookSlot = async (slotId) => {
     dispatch(
