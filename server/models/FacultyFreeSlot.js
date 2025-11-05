@@ -1,13 +1,14 @@
-import { Schema, model } from "mongoose";
+const mongoose = require("mongoose");
+require("./User");
 
-const slotSchema = new Schema({
+const slotSchema = new mongoose.Schema({
   UG: { type: Boolean, default: false },
   PG: { type: Boolean, default: false },
   PHD: { type: Boolean, default: false },
   bookStatus: { type: Boolean, default: false }
 }, { _id: false });
 
-const daySchema = new Schema({
+const daySchema = new mongoose.Schema({
   "08-09": slotSchema,
   "09-10": slotSchema,
   "10-11": slotSchema,
@@ -22,21 +23,39 @@ const daySchema = new Schema({
   "19-20": slotSchema,
 }, { _id: false });
 
-const facultyFreeSlotSchema = new Schema({
-  facultyId: {
-    type: Schema.Types.ObjectId,
-    ref: "Faculty",
-    required: true,
+// ===== Main Faculty Free Slot Schema =====
+const facultyFreeSlotSchema = new mongoose.Schema(
+  {
+    facultyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      validate: {
+        validator: async function (id) {
+          const user = await mongoose.model("User").findById(id);
+          return user && user.role === "Faculty";
+        },
+        message: "facultyId must belong to a user with role 'Faculty'",
+      },
+    },
+    freeSlot: {
+      type: mongoose.Schema.Types.Mixed,
+      required: true,
+      default: {},
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  freeSlot: {
-    type: Map,
-    of: daySchema,
-    required: true,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { collection: "facultyfreeslots" } // keep this name fixed
+);
 
-export default model("FacultyFreeSlot", facultyFreeSlotSchema);
+// ===== Model Export =====
+const FacultyFreeSlot = mongoose.model(
+  "FacultyFreeSlot",
+  facultyFreeSlotSchema,
+  "facultyfreeslots"
+);
+
+module.exports = FacultyFreeSlot;
