@@ -1,7 +1,7 @@
 import User from "../models/User.js";
 import pkg from "jsonwebtoken";
 import { compare } from "bcryptjs";
-import { persistCalender } from "./facultyControllers.js";
+import { persistCalender } from "./facultyController.js";
 
 const { sign, verify } = pkg;
 
