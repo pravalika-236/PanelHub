@@ -45,12 +45,9 @@ const ManageApprovedBookings = () => {
     }
   };
 
-  if (loading) {
-    return <Loader message="Loading approved bookings..." />;
-  }
-
   return (
     <div>
+      {loading && <Loader message='Please Wait' />}
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Manage Approved Bookings</h2>

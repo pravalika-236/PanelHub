@@ -19,9 +19,8 @@ const ScholarRegister = () => {
 
   useEffect(() => {
     if (success) {
-      setTimeout(() => {
+      alert("Account creation success, Please login")
         navigate('/login');
-      }, 2000);
     }
   }, [success, navigate]);
 

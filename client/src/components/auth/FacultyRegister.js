@@ -18,9 +18,8 @@ const FacultyRegister = () => {
 
   useEffect(() => {
     if (success) {
-      setTimeout(() => {
+      alert("Account creation Sucess, Please Login")
         navigate('/login');
-      }, 2000);
     }
   }, [success, navigate]);
 

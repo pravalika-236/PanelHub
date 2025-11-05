@@ -9,16 +9,14 @@ import ScholarDashboard from './components/scholar/ScholarDashboard';
 import FacultyDashboard from './components/faculty/FacultyDashboard';
 import LandingPage from './components/common/LandingPage';
 import { PersistGate } from 'redux-persist/integration/react';
+import Loader from './components/common/Loader';
 
 const AppRoutes = () => {
   const { loading, isAuthenticated, role } = useSelector(state => state.auth);
 
-  if (loading) {
-    return <div>Loading...</div>; // or a proper spinner
-  }
-
   return (
     <Router>
+      {loading && <Loader message='Please Wait' />}
       <div className="App">
         <Routes>
           <Route path="/" element={<LandingPage />} />

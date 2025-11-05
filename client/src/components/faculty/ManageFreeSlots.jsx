@@ -81,14 +81,11 @@ const ManageFreeSlots = () => {
     dispatch(updateFacultySlot({facultyId: id, calendarData: newCalender}));
   }
 
-  if (loading) {
-    return <Loader message="Loading your calendar..." />;
-  }
-
   const weekDates = getWeekDates(newCalender);
 
   return (
     <div>
+      {loading && <Loader message='Please Wait' />}
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Manage Free Slots</h2>

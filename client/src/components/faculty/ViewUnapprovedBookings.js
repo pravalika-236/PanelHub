@@ -51,12 +51,9 @@ const ViewUnapprovedBookings = () => {
     }
   };
 
-  if (loading) {
-    return <Loader message="Loading booking requests..." />;
-  }
-
   return (
     <div>
+      {loading && <Loader message='Please Wait' />}
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">View Unapproved Bookings</h2>

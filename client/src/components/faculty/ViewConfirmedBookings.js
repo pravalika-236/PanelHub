@@ -45,12 +45,9 @@ const ViewConfirmedBookings = () => {
     }
   };
 
-  if (loading) {
-    return <Loader message="Loading confirmed bookings..." />;
-  }
-
   return (
     <div>
+      {loading && <Loader message='Please Wait' />}
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Confirmed Bookings</h2>
