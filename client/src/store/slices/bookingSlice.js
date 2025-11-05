@@ -156,14 +156,7 @@ const bookingSlice = createSlice({
     },
     clearSuccess: (state) => {
       state.success = null;
-    },
-        // ✅ added manually so BookSlot can directly update slots from backend
-    setAvailableSlots: (state, action) => {
-      state.availableSlots = action.payload;
-      state.loading = false;
-      state.error = null;
-    },
-
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -230,5 +223,5 @@ const bookingSlice = createSlice({
   }
 });
 
-export const { clearSlots, clearError, clearSuccess, setAvailableSlots } = bookingSlice.actions;
+export const { clearSlots, clearError, clearSuccess } = bookingSlice.actions;
 export default bookingSlice.reducer;
