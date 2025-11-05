@@ -40,6 +40,7 @@ const BookSlot = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [facultyData, setFacultyData] = useState([]);
   const [userDept, setUserDept] = useState(null);
+  const [userCourse, setUserCourse] = useState(null);
 
   // ✅ CHANGE #4: consistent faculty fetching logic (live data from backend)
   useEffect(() => {
@@ -48,14 +49,21 @@ const BookSlot = () => {
       if (!id || !token) return;
 
       let dept = department;
-      if (!dept) {
+      let courseCat = courseCategory;
+
+      if (!dept || !courseCat) {
         const profile = await fetchUserProfile(id, token);
         if (profile?.department) {
           dept = profile.department;
           setUserDept(profile.department);
-        } else return;
+        }
+        if (profile?.courseCategory) {
+          courseCat = profile.courseCategory;
+          setUserCourse(profile.courseCategory);
+        }
       } else {
         setUserDept(dept);
+        setUserCourse(courseCat);
       }
 
       try {
@@ -77,7 +85,7 @@ const BookSlot = () => {
     };
 
     if (id) loadFaculties();
-  }, [id, department]);
+  }, [id, department, courseCategory]);
 
   const departmentFaculties = userDept
     ? facultyData.filter((faculty) => faculty.department === userDept)
@@ -100,7 +108,6 @@ const BookSlot = () => {
     }
   };
 
-  // ✅ CHANGE #5: unified handleSearchSlots logic consistent with backend (faculty/common-slots)
   const handleSearchSlots = async () => {
     if (selectedFaculties.length === 0 || !selectedDate) {
       dispatch(clearError());
@@ -109,11 +116,14 @@ const BookSlot = () => {
     }
 
     const token = auth.authToken || localStorage.getItem("token");
-    console.log("🧠 Auth state:", auth);
+
+    // ✅ Ensure batch uses fetched live value first
+    const batchToUse = userCourse || courseCategory || "UG";
+
     console.log("🔍 Debug Common Slot Request:", {
       facultyIds: selectedFaculties.map((f) => f._id || f.id),
       date: selectedDate,
-      batch: courseCategory || "UG",
+      batch: batchToUse,
     });
 
     try {
@@ -122,7 +132,7 @@ const BookSlot = () => {
         {
           facultyIds: selectedFaculties.map((f) => f._id || f.id),
           date: selectedDate,
-          batch: courseCategory || "UG",
+          batch: batchToUse,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -183,6 +193,9 @@ const BookSlot = () => {
       startTime: chosenTime,
       duration: 1,
       createdBy: id,
+      // ✅ ADDED: send department & courseCategory explicitly
+      department: userDept || department, // backend maps name → ObjectId
+      courseCategory: userCourse || courseCategory || "UG",
     };
     console.log("Booking payload:", bookingData);
 

@@ -23,19 +23,18 @@ export const searchSlots = async (req, res) => {
 
 export const bookSlot = async (req, res) => {
   try {
-    const { scholarIds, facultyApprovals, date, startTime, duration, status } = req.body;
     const user = req.user;
+    const { scholarIds, facultyApprovals, date, startTime, duration, status } = req.body;
 
-    // 🧩 STEP 1: Find Department & Course ObjectIds from string names
-    const departmentDoc = await Department.findOne({ name: user.department });
-    const courseDoc = user.courseCategory
-      ? await Course.findOne({ name: user.courseCategory })
-      : null;
+    // Map department and courseCategory strings to ObjectIds
+    const department = await Department.findOne({ name: user.department });
+    const courseCategory = await Course.findOne({ name: user.courseCategory });
 
-    if (!departmentDoc)
-      return res.status(400).json({ message: "Invalid department reference" });
+    if (!department) {
+      return res.status(400).json({ message: `Department '${user.department}' not found` });
+    }
 
-    // 🧩 STEP 2: Construct booking with proper refs
+    // Optional: allow courseCategory to be nullable
     const booking = new Booking({
       scholarIds,
       facultyApprovals,
@@ -43,26 +42,22 @@ export const bookSlot = async (req, res) => {
       date,
       startTime,
       duration,
-      department: departmentDoc._id,
-      courseCategory: courseDoc ? courseDoc._id : null,
+      department: department._id,
+      courseCategory: courseCategory ? courseCategory._id : null,
       createdBy: user._id,
       createdAt: new Date(),
       updatedBy: user._id,
       updatedAt: new Date(),
     });
 
-    // 🧩 STEP 3: Save booking
     const saved = await booking.save();
-    return res.status(201).json({
-      message: "Booking created successfully",
-      booking: saved,
-    });
+    res.status(201).json({ message: "Booking created successfully", booking: saved });
+
   } catch (err) {
     console.error("❌ Booking creation failed:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 
 /* -------------------------------------------------------------------------- */
 /*                             USER BOOKINGS                                  */
