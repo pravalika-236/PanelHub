@@ -109,11 +109,26 @@ const BookSlot = () => {
   };
 
   const handleSearchSlots = async () => {
-    if (selectedFaculties.length === 0 || !selectedDate) {
-      dispatch(clearError());
-      dispatch(clearSuccess());
+    dispatch(clearError());
+    dispatch(clearSuccess());
+    setBookingSuccessMsg(""); // 🥒 PICKLE: Clear previous success message on new search
+
+    if (hasActiveBooking) {
+      dispatch({
+        type: "booking/searchAvailableSlots/rejected",
+        error: {
+          message: "You already have an active booking request pending.",
+        }, // 🥒 PICKLE: Show proper message
+      });
+      dispatch(setAvailableSlots([])); // 🥒 PICKLE: Ensure slots grid is empty
       return;
     }
+
+    if (selectedFaculties.length === 0 || !selectedDate) {
+      dispatch(setAvailableSlots([])); // <-- Clear old slots
+      return;
+    }
+    dispatch(setAvailableSlots([])); // <-- Clear old slots before API call
 
     const token = auth.authToken || localStorage.getItem("token");
 
@@ -170,8 +185,23 @@ const BookSlot = () => {
     }
   };
 
-  // ✅ CHANGE #6: booking payload restored to match backend expectations
+  const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
+  const [bookingErrorMsg, setBookingErrorMsg] = useState(""); // 🥒 PICKLE: new local error state
+
   const handleBookSlot = async (slotId) => {
+    if (hasActiveBooking) {
+      dispatch(clearError());
+      setBookingErrorMsg("You already have an active booking!"); // 🥒 PICKLE: show error immediately
+
+      dispatch({
+        type: "booking/bookPresentationSlot/rejected",
+        error: { message: "You already have an active booking" },
+      });
+      return;
+    }
+
+    setBookingErrorMsg(""); // 🥒 PICKLE: clear previous errors on new booking attempt
+
     const token = auth.authToken || localStorage.getItem("token");
     const chosen = availableSlots.find((slot) => slot.id === slotId);
     const chosenTime = chosen?.time || null;
@@ -193,8 +223,7 @@ const BookSlot = () => {
       startTime: chosenTime,
       duration: 1,
       createdBy: id,
-      // ✅ ADDED: send department & courseCategory explicitly
-      department: userDept || department, // backend maps name → ObjectId
+      department: userDept || department,
       courseCategory: userCourse || courseCategory || "UG",
     };
     console.log("Booking payload:", bookingData);
@@ -212,8 +241,18 @@ const BookSlot = () => {
       );
 
       console.log("✅ Booking response:", res.data);
+      dispatch(setAvailableSlots([]));
+      setBookingSuccessMsg("Booking request was successful!");
     } catch (err) {
       console.error("❌ Booking failed:", err.response?.data || err.message);
+      setBookingErrorMsg(err.response?.data?.message || "Booking failed"); // 🥒 PICKLE: show error immediately
+
+      dispatch({
+        type: "booking/bookPresentationSlot/rejected",
+        error: {
+          message: err.response?.data?.message || "Booking failed",
+        },
+      });
     }
   };
 
@@ -296,15 +335,25 @@ const BookSlot = () => {
         <button
           onClick={handleSearchSlots}
           className="btn btn-primary"
-          disabled={loading}
+          disabled={loading || hasActiveBooking}
         >
           {loading ? "Searching..." : "Search Available Slots"}
         </button>
       </div>
 
       {loading && <Loader message="Searching for available slots..." />}
+      {bookingSuccessMsg && (
+        <div className="card">
+          <div className="alert alert-success">{bookingSuccessMsg}</div>
+        </div>
+      )}
+      {bookingErrorMsg && (
+        <div className="card">
+          <div className="alert alert-danger">{bookingErrorMsg}</div>
+        </div>
+      )}
 
-      {availableSlots.length > 0 && (
+      {!bookingSuccessMsg && availableSlots.length > 0 && (
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Available Slots</h3>
@@ -341,6 +390,7 @@ const BookSlot = () => {
                   onClick={() => handleBookSlot(slot.id)}
                   className="btn btn-success"
                   style={{ width: "100%" }}
+                  disabled={hasActiveBooking}
                 >
                   Book This Slot
                 </button>

@@ -192,10 +192,12 @@ const bookingSlice = createSlice({
         state.availableSlots = [];
         state.userBookings.push(action.payload.booking);
         state.error = null;
+
+        state.hasActiveBooking = true;
       })
       .addCase(bookPresentationSlot.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.error.message;
       })
       // Fetch User Bookings
       .addCase(fetchUserBookings.pending, (state) => {
@@ -220,11 +222,14 @@ const bookingSlice = createSlice({
         state.loading = false;
         state.success = action.payload.message;
         state.error = null;
+
+        state.hasActiveBooking = false;
       })
       .addCase(cancelUserBooking.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
+      })
+      ;
   }
 });
 
