@@ -8,7 +8,6 @@ import {
   setAvailableSlots, // ✅ added
 } from "../../store/slices/bookingSlice";
 
-
 import Loader from "../common/Loader";
 import Select from "react-select";
 import axios from "axios";
@@ -115,79 +114,123 @@ const BookSlot = () => {
   };
 
   // REPLACE your current handleSearchSlots with this (minimal change)
-const handleSearchSlots = async () => {
-  if (selectedFaculties.length === 0 || !selectedDate) {
-    // ✅ simplified combined check
-    dispatch(clearError());
-    dispatch(clearSuccess());
-    return;
-  }
+  const handleSearchSlots = async () => {
+    if (selectedFaculties.length === 0 || !selectedDate) {
+      // ✅ simplified combined check
+      dispatch(clearError());
+      dispatch(clearSuccess());
+      return;
+    }
 
-  const token = auth.authToken || localStorage.getItem("token");
+    const token = auth.authToken || localStorage.getItem("token");
 
-  try {
-    // ✅ added batch (courseCategory) for backend context
-    const res = await axios.post(
-      "http://localhost:5000/api/faculty/common-slots",
-      {
-        facultyIds: selectedFaculties.map((f) => f._id || f.id),
-        date: selectedDate,
-        batch: auth.courseCategory || "UG", // ✅ change: dynamic batch support
-      },
-      {
-        headers: { Authorization: `Bearer ${token}` },
+    try {
+      // ✅ added batch (courseCategory) for backend context
+      const res = await axios.post(
+        "http://localhost:5000/api/faculty/common-slots",
+        {
+          facultyIds: selectedFaculties.map((f) => f._id || f.id),
+          date: selectedDate,
+          batch: auth.courseCategory || "UG", // ✅ change: dynamic batch support
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("✅ Common slots response:", res.data);
+
+      // ✅ safer access with fallback to empty array
+      const transformedSlots =
+        res.data?.commonSlots?.flatMap((dayObj) =>
+          (dayObj.blocks || []).map((block) => ({
+            id: `${dayObj.day}-${block}`,
+            time: block,
+            day: dayObj.day,
+          }))
+        ) || [];
+
+      dispatch(clearError());
+      dispatch(clearSuccess());
+
+      if (transformedSlots.length > 0) {
+        dispatch(setAvailableSlots(transformedSlots)); // ✅ direct update to Redux state
+      } else {
+        dispatch({
+          type: "booking/searchAvailableSlots/rejected",
+          error: { message: "No common slots available" },
+        });
       }
-    );
-
-    console.log("✅ Common slots response:", res.data);
-
-    // ✅ safer access with fallback to empty array
-    const transformedSlots =
-      res.data?.commonSlots?.flatMap((dayObj) =>
-        (dayObj.blocks || []).map((block) => ({
-          id: `${dayObj.day}-${block}`,
-          time: block,
-          day: dayObj.day,
-        }))
-      ) || [];
-
-    dispatch(clearError());
-    dispatch(clearSuccess());
-
-    if (transformedSlots.length > 0) {
-      dispatch(setAvailableSlots(transformedSlots)); // ✅ direct update to Redux state
-    } else {
+    } catch (err) {
+      console.error("❌ Error fetching common slots:", err);
       dispatch({
         type: "booking/searchAvailableSlots/rejected",
-        error: { message: "No common slots available" },
+        error: {
+          message:
+            err.response?.data?.message || "Failed to fetch common slots",
+        },
       });
     }
+  };
+
+// ---------- REPLACE handleBookSlot WITH THIS (minimal, defensive) ----------
+const handleBookSlot = async (slotId) => {
+  // ensure we have auth token
+  const token = auth.authToken || localStorage.getItem("token");
+
+  // pick out the slot time from currently availableSlots
+  const chosen = availableSlots.find((slot) => slot.id === slotId);
+  const chosenTime = chosen?.time || null;
+
+  // Build facultyApprovals object — each faculty false initially
+  const facultyIds = selectedFaculties.map((f) => f._id || f.id);
+  const facultyApprovals = {};
+  facultyIds.forEach((fid, idx) => {
+    // using keys like faculty1, faculty2 or use the id as key — choose id as key
+    facultyApprovals[fid] = false;
+  });
+
+  // Defensive defaults: use auth.courseCategory if exists, else "UG"
+  const courseCategoryVal = auth.courseCategory || "UG";
+
+  // Make date an ISO date (backend usually likes ISO)
+  const isoDate = selectedDate ? new Date(selectedDate).toISOString() : null;
+
+  // Compose booking payload (names chosen to match schema you showed)
+  const bookingData = {
+    scholarIds: [auth.id],                // array of scholar/user ids
+    facultyIds,                           // array of faculty ObjectId strings
+    facultyApprovals,                     // map of facultyId => false
+    status: "pending",                    // default booking status
+    date: isoDate,                        // ISO date string
+    time: chosenTime,                     // expects `time` field (string)
+    duration: 1,                          // always 1 hour per your spec
+    department: userDept || auth.department || "Unknown", // try to send department name
+    courseCategory: courseCategoryVal,    // not null
+    userId: auth.id,                      // send userId (backend earlier wanted this)
+    createdBy: auth.id,                   // include createdBy if backend expects it too
+    createdAt: new Date().toISOString(),  // optional metadata
+  };
+
+  console.log("📦 Booking data being sent:", bookingData); // debug
+
+  try {
+    const res = await axios.post(
+      "http://localhost:5000/api/bookings/book",
+      bookingData,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    console.log("✅ Booking response:", res.data);
+    // TODO: dispatch success into Redux or show toast
   } catch (err) {
-    console.error("❌ Error fetching common slots:", err);
-    dispatch({
-      type: "booking/searchAvailableSlots/rejected",
-      error: {
-        message:
-          err.response?.data?.message || "Failed to fetch common slots",
-      },
-    });
+    // Show as much useful info as we can (server body or full error)
+    console.error("❌ Booking failed:", err.response?.data || err.message);
+    // optional: dispatch Redux error, same as you do for other errors
   }
 };
 
 
-  const handleBookSlot = async (slotId) => {
-    dispatch(
-      bookPresentationSlot({
-        slotId,
-        faculties: selectedFaculties,
-        date: selectedDate,
-        time: availableSlots.find((slot) => slot.id === slotId)?.time,
-        userId: auth.id,
-        department: userDept,
-        courseCategory: auth.courseCategory,
-      })
-    );
-  };
 
   return (
     <div>
