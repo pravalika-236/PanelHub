@@ -109,6 +109,12 @@ const BookSlot = () => {
     }
 
     const token = auth.authToken || localStorage.getItem("token");
+    console.log("🧠 Auth state:", auth);
+    console.log("🔍 Debug Common Slot Request:", {
+      facultyIds: selectedFaculties.map((f) => f._id || f.id),
+      date: selectedDate,
+      batch: courseCategory || "UG",
+    });
 
     try {
       const res = await axios.post(
@@ -162,22 +168,28 @@ const BookSlot = () => {
 
     const facultyIds = selectedFaculties.map((f) => f._id || f.id);
     const facultyApprovals = {};
-    facultyIds.forEach((fid) => (facultyApprovals[fid] = false));
+    facultyIds.forEach((fid, index) => {
+      facultyApprovals[`Faculty${index + 1}`] = {
+        facultyId: fid,
+        approveStatus: false,
+      };
+    });
 
     const bookingData = {
       scholarIds: [id],
-      facultyIds,
       facultyApprovals,
       status: "pending",
       date: selectedDate ? new Date(selectedDate).toISOString() : null,
-      time: chosenTime,
+      startTime: chosenTime,
       duration: 1,
-      department: userDept || department || "Unknown",
-      courseCategory: courseCategory || "UG",
-      userId: id,
       createdBy: id,
-      createdAt: new Date().toISOString(),
     };
+    console.log("Booking payload:", bookingData);
+
+    if (!availableSlots.length) {
+      console.warn("⚠️ No available slots to book.");
+      return;
+    }
 
     try {
       const res = await axios.post(

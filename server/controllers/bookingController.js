@@ -1,4 +1,6 @@
 import Booking from "../models/Booking.js";
+import Department from "../models/Department.js";
+import Course from "../models/Course.js";
 
 /* -------------------------------------------------------------------------- */
 /*                               SEARCH SLOTS                                 */
@@ -19,87 +21,56 @@ export const searchSlots = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                               BOOK SLOT                                    */
-/* -------------------------------------------------------------------------- */
 export const bookSlot = async (req, res) => {
   try {
-    // ✅ Extract relevant fields
-    const {
+    const { scholarIds, facultyApprovals, date, startTime, duration, status } = req.body;
+    const user = req.user;
+
+    // 🧩 STEP 1: Find Department & Course ObjectIds from string names
+    const departmentDoc = await Department.findOne({ name: user.department });
+    const courseDoc = user.courseCategory
+      ? await Course.findOne({ name: user.courseCategory })
+      : null;
+
+    if (!departmentDoc)
+      return res.status(400).json({ message: "Invalid department reference" });
+
+    // 🧩 STEP 2: Construct booking with proper refs
+    const booking = new Booking({
       scholarIds,
-      facultyIds,
+      facultyApprovals,
+      status: status || "pending",
       date,
       startTime,
       duration,
-      department,
-      courseCategory,
-      createdBy,
-    } = req.body;
-
-    // ✅ Basic validation
-    if (!scholarIds || !facultyIds || !date || !startTime) {
-      return res
-        .status(400)
-        .json({ message: "Missing required fields for booking" });
-    }
-
-    // ✅ Initialize faculty approvals dynamically
-    const facultyApprovals = {};
-    facultyIds.forEach((fid) => {
-      facultyApprovals[fid] = false;
-    });
-
-    // ✅ Construct booking doc according to your schema
-    const newBooking = new Booking({
-      scholarIds,
-      facultyIds,
-      facultyApprovals,
-      status: "pending",
-      date,
-      startTime,
-      duration: duration || 1,
-      department,
-      courseCategory,
-      createdBy,
+      department: departmentDoc._id,
+      courseCategory: courseDoc ? courseDoc._id : null,
+      createdBy: user._id,
       createdAt: new Date(),
-      updatedBy: createdBy,
+      updatedBy: user._id,
       updatedAt: new Date(),
     });
 
-    await newBooking.save();
-
+    // 🧩 STEP 3: Save booking
+    const saved = await booking.save();
     return res.status(201).json({
-      success: true,
-      message: "Slot booked successfully!",
-      booking: newBooking,
+      message: "Booking created successfully",
+      booking: saved,
     });
-// inside bookSlot controller catch block
-} catch (err) {
-  console.error("❌ Booking save error:", err);
-
-  // If Mongoose validation error, include details
-  if (err.name === "ValidationError") {
-    const errors = {};
-    for (const key in err.errors) {
-      errors[key] = err.errors[key].message;
-    }
-    return res.status(400).json({
-      message: "Failed to book slot",
-      error: err.message,
-      validationErrors: errors,
-    });
+  } catch (err) {
+    console.error("❌ Booking creation failed:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
-
-  res.status(500).json({ message: err.message });
-}
 };
+
 
 /* -------------------------------------------------------------------------- */
 /*                             USER BOOKINGS                                  */
 /* -------------------------------------------------------------------------- */
 export const getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ userId: req.params.userId });
+    // adapt query: bookings created by a specific user
+    const bookings = await Booking.find({ createdBy: req.params.userId });
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -117,3 +88,4 @@ export const cancelBooking = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
