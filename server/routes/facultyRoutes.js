@@ -2,8 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import {
   createFacultySlot,
-    tySlot,
-  updateFacultySlot,
+  getFacultySlot,  updateFacultySlot,
   getConfirmedBookings,
   approveBooking,
   getCommonSlots,
