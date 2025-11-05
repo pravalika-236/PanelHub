@@ -1,28 +1,26 @@
 import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
+import { config } from "dotenv";
+import cors from "cors"; 
 
 import connectDB from "./config/db.js";
 
-// Routes
-import bookingRoutes from "./routes/bookingRoutes.js";
+import userRouter from "./routes/userRoutes.js";
 import facultyRoutes from "./routes/facultyRoutes.js";
-import userRoutes from "./routes/userRoutes.js"; // ✅ teammate’s part
 
-dotenv.config();
+config();
+const app = express();
+
+// Connect DB
 connectDB();
 
-const app = express();
-app.use(cors());
+// Middleware
 app.use(express.json());
+app.use(cors());
 
-// ✅ All routes combined
-app.use("/api/users", userRoutes);        // login/signup/auth
-app.use("/api/bookings", bookingRoutes);  // booking/cancel endpoints
-app.use("/api/faculty", facultyRoutes);   // faculty availability + dropdown feature
+// Routes
+app.use("/api/faculty", facultyRoutes);
+app.use("/api/users", userRouter);
 
-// ✅ Health check route
-app.get("/", (req, res) => res.send("✅ PanelHub Server is running successfully."));
-
+// Server Start
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
