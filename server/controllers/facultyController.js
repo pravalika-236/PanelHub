@@ -2,26 +2,25 @@ import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
 import { createDefaultFacultyFreeSlots } from "../utils/supportFunctions.js";
 import asyncHandler from "express-async-handler";
 import User from "../models/User.js";
+import Booking from "../models/Booking.js";
 
-/* -------------------------------------------------------------------------- */
-/*                              SLOT MANAGEMENT                               */
-/* -------------------------------------------------------------------------- */
 
 // Create a new faculty slot document with default free slots
 export async function createFacultySlot(req, res) {
   try {
     const { facultyId } = req.params;
 
-    await persistCalender(facultyId); // ✅ keep spelling same as used in userControllers.js
+    await persistCalender(facultyId);
 
     res.status(201).json({ message: "Faculty slot created successfully" });
   } catch (err) {
-    console.error("❌ createFacultySlot:", err);
+    console.error("createFacultySlot:", err);
     res.status(500).json({ message: `Internal Server Error: ${err.message}` });
   }
 }
 
-// ✅ Used by userControllers.js to initialize faculty calendar
+
+// Used by userControllers.js to initialize faculty calendar
 export async function persistCalender(facultyId) {
   try {
     const freeSlot = createDefaultFacultyFreeSlots(facultyId);
@@ -33,11 +32,12 @@ export async function persistCalender(facultyId) {
     });
 
     await newRecord.save();
-    console.log(`🟢 Default calendar created for faculty: ${facultyId}`);
+    console.log(`Default calendar created for faculty: ${facultyId}`);
   } catch (err) {
-    console.error("❌ persistCalender error:", err);
+    console.error("persistCalender error:", err);
   }
 }
+
 
 // Update an existing slot document
 export async function updateFacultySlot(req, res) {
@@ -55,10 +55,11 @@ export async function updateFacultySlot(req, res) {
 
     res.status(200).json({ message: "Faculty slot updated", data: updated });
   } catch (err) {
-    console.error("❌ updateFacultySlot:", err);
+    console.error("updateFacultySlot:", err);
     res.status(500).json({ error: err.message });
   }
 }
+
 
 // Fetch slot info for a specific faculty
 export async function getFacultySlot(req, res) {
@@ -69,14 +70,11 @@ export async function getFacultySlot(req, res) {
     if (!slot) return res.status(404).json({ message: "No record found" });
     res.json(slot);
   } catch (err) {
-    console.error("❌ getFacultySlot:", err);
+    console.error("getFacultySlot:", err);
     res.status(500).json({ error: err.message });
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                            FACULTY DROPDOWN LIST                           */
-/* -------------------------------------------------------------------------- */
 
 export async function getAllFaculties(req, res) {
   try {
@@ -94,43 +92,67 @@ export async function getAllFaculties(req, res) {
 
     res.json({ faculties });
   } catch (err) {
-    console.error("❌ getAllFaculties:", err);
+    console.error("getAllFaculties:", err);
     res.status(500).json({ message: "Server error" });
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                           BOOKING & COMMON SLOTS                           */
-/* -------------------------------------------------------------------------- */
 
 // These retain upstream placeholders — replace later when logic is merged
 export async function getConfirmedBookings(req, res) {
   try {
     // 🔸 Upstream logic placeholder
   } catch (error) {
-    console.error("❌ getConfirmedBookings:", error);
+    console.error("getConfirmedBookings:", error);
     res.status(500).json({ message: "Error fetching confirmed bookings" });
+  }
+}
+
+export async function getUnapproveBooking(req, res) {
+  try {
+    const { facultyId, date, time, courseCategory } = req.body;
+    const bookings = await Booking.find({
+      date: date,
+      time: time,
+      courseCategory: courseCategory,
+      "faculties.id": facultyId
+    });
+    res.json(bookings);
+  } catch (error) {
+    console.error("unapproveBooking:", error);
+    res.status(500).json({ message: "Error getting unapproved booking" });
   }
 }
 
 export async function approveBooking(req, res) {
   try {
-    // 🔸 Upstream logic placeholder
+    const { bookingId, facultyId } = req.body;
+    await Booking.updateOne(
+      {
+        _id: bookingId,
+        "faculties.id": facultyId
+      },
+      {
+        $set: { "faculties.$.approved": true }
+      }
+    );
+
+    res.status(200).json({message: "Approved"})
   } catch (error) {
-    console.error("❌ approveBooking:", error);
-    res.status(500).json({ message: "Error approving booking" });
+    console.error("unapproveBooking:", error);
+    res.status(500).json({ message: "Error getting unapproved booking" });
   }
 }
 
 export const getCommonSlots = asyncHandler(async (req, res) => {
   try {
-    // ✅ 1. Authentication
+    // Authentication
     const tokenUser = req.user;
     if (!tokenUser) {
       return res.status(401).json({ message: "Not authorized, no token" });
     }
 
-    // ✅ 2. Input validation
+    // Input validation
     const { facultyIds, date, batch } = req.body;
     if (!facultyIds?.length || !date) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -143,7 +165,7 @@ export const getCommonSlots = asyncHandler(async (req, res) => {
 
     const finalBatch = batch || user.courseCategory || "UG";
 
-    // ✅ 3. Normalize date format (YYYY-MM-DD → DD-MM-YYYY)
+    // Normalize date format (YYYY-MM-DD → DD-MM-YYYY)
     const normalizeDate = (input) => {
       const d = new Date(input);
       const day = String(d.getDate()).padStart(2, "0");
@@ -153,7 +175,7 @@ export const getCommonSlots = asyncHandler(async (req, res) => {
     };
     const normalizedDate = normalizeDate(date);
 
-    // ✅ 4. Fetch slot documents
+    // Fetch slot documents
     const freeSlotsDocs = await FacultyFreeSlot.find({
       facultyId: { $in: facultyIds },
     }).populate({
@@ -167,7 +189,7 @@ export const getCommonSlots = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "No faculty slots found" });
     }
 
-    // ✅ 5. Extract common available blocks
+    // Extract common available blocks
     const commonBlocks = (() => {
       const sample = freeSlotsDocs[0]?.freeSlot?.[normalizedDate];
       if (!sample) return [];
@@ -182,7 +204,7 @@ export const getCommonSlots = asyncHandler(async (req, res) => {
       );
     })();
 
-    // ✅ 6. Response
+    // Response
     return res.json({
       version: "3.3",
       message: "Common slots found successfully",
@@ -193,7 +215,7 @@ export const getCommonSlots = asyncHandler(async (req, res) => {
       commonSlots: [{ day: normalizedDate, blocks: commonBlocks }],
     });
   } catch (error) {
-    console.error("❌ Error in getCommonSlots (v3.3):", error);
+    console.error("Error in getCommonSlots (v3.3):", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });

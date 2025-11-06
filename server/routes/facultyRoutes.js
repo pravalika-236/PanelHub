@@ -4,8 +4,9 @@ import {
   createFacultySlot,
   getFacultySlot,  updateFacultySlot,
   getConfirmedBookings,
-  approveBooking,
   getCommonSlots,
+  getUnapproveBooking,
+  approveBooking,
 } from "../controllers/facultyController.js";
 import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
 import { protect } from "../middleware/authMiddleware.js";
@@ -57,6 +58,7 @@ router.get("/faculty", protect, async (req, res) => {
 /* -------------------------------------------------------------------------- */
 
 router.get("/confirmed", getConfirmedBookings);
+router.get("/unapproved", getUnapproveBooking);
 router.post("/approve", approveBooking);
 router.post("/common-slots", protect, getCommonSlots);
 
