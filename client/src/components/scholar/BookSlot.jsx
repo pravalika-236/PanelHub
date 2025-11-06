@@ -40,6 +40,7 @@ const BookSlot = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [facultyData, setFacultyData] = useState([]);
   const [userDept, setUserDept] = useState(null);
+  const [userCourse, setUserCourse] = useState(null);
 
   // ✅ CHANGE #4: consistent faculty fetching logic (live data from backend)
   useEffect(() => {
@@ -48,14 +49,21 @@ const BookSlot = () => {
       if (!id || !token) return;
 
       let dept = department;
-      if (!dept) {
+      let courseCat = courseCategory;
+
+      if (!dept || !courseCat) {
         const profile = await fetchUserProfile(id, token);
         if (profile?.department) {
           dept = profile.department;
           setUserDept(profile.department);
-        } else return;
+        }
+        if (profile?.courseCategory) {
+          courseCat = profile.courseCategory;
+          setUserCourse(profile.courseCategory);
+        }
       } else {
         setUserDept(dept);
+        setUserCourse(courseCat);
       }
 
       try {
@@ -77,7 +85,7 @@ const BookSlot = () => {
     };
 
     if (id) loadFaculties();
-  }, [id, department]);
+  }, [id, department, courseCategory]);
 
   const departmentFaculties = userDept
     ? facultyData.filter((faculty) => faculty.department === userDept)
@@ -100,15 +108,38 @@ const BookSlot = () => {
     }
   };
 
-  // ✅ CHANGE #5: unified handleSearchSlots logic consistent with backend (faculty/common-slots)
   const handleSearchSlots = async () => {
-    if (selectedFaculties.length === 0 || !selectedDate) {
-      dispatch(clearError());
-      dispatch(clearSuccess());
+    dispatch(clearError());
+    dispatch(clearSuccess());
+    setBookingSuccessMsg(""); // 🥒 PICKLE: Clear previous success message on new search
+
+    if (hasActiveBooking) {
+      dispatch({
+        type: "booking/searchAvailableSlots/rejected",
+        error: {
+          message: "You already have an active booking request pending.",
+        }, // 🥒 PICKLE: Show proper message
+      });
+      dispatch(setAvailableSlots([])); // 🥒 PICKLE: Ensure slots grid is empty
       return;
     }
 
+    if (selectedFaculties.length === 0 || !selectedDate) {
+      dispatch(setAvailableSlots([])); // <-- Clear old slots
+      return;
+    }
+    dispatch(setAvailableSlots([])); // <-- Clear old slots before API call
+
     const token = auth.authToken || localStorage.getItem("token");
+
+    // ✅ Ensure batch uses fetched live value first
+    const batchToUse = userCourse || courseCategory || "UG";
+
+    console.log("🔍 Debug Common Slot Request:", {
+      facultyIds: selectedFaculties.map((f) => f._id || f.id),
+      date: selectedDate,
+      batch: batchToUse,
+    });
 
     try {
       const res = await axios.post(
@@ -116,7 +147,7 @@ const BookSlot = () => {
         {
           facultyIds: selectedFaculties.map((f) => f._id || f.id),
           date: selectedDate,
-          batch: courseCategory || "UG",
+          batch: batchToUse,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -154,30 +185,53 @@ const BookSlot = () => {
     }
   };
 
-  // ✅ CHANGE #6: booking payload restored to match backend expectations
+  const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
+  const [bookingErrorMsg, setBookingErrorMsg] = useState(""); // 🥒 PICKLE: new local error state
+
   const handleBookSlot = async (slotId) => {
+    if (hasActiveBooking) {
+      dispatch(clearError());
+      setBookingErrorMsg("You already have an active booking!"); // 🥒 PICKLE: show error immediately
+
+      dispatch({
+        type: "booking/bookPresentationSlot/rejected",
+        error: { message: "You already have an active booking" },
+      });
+      return;
+    }
+
+    setBookingErrorMsg(""); // 🥒 PICKLE: clear previous errors on new booking attempt
+
     const token = auth.authToken || localStorage.getItem("token");
     const chosen = availableSlots.find((slot) => slot.id === slotId);
     const chosenTime = chosen?.time || null;
 
     const facultyIds = selectedFaculties.map((f) => f._id || f.id);
     const facultyApprovals = {};
-    facultyIds.forEach((fid) => (facultyApprovals[fid] = false));
+    facultyIds.forEach((fid, index) => {
+      facultyApprovals[`Faculty${index + 1}`] = {
+        facultyId: fid,
+        approveStatus: false,
+      };
+    });
 
     const bookingData = {
       scholarIds: [id],
-      facultyIds,
       facultyApprovals,
       status: "pending",
       date: selectedDate ? new Date(selectedDate).toISOString() : null,
-      time: chosenTime,
+      startTime: chosenTime,
       duration: 1,
-      department: userDept || department || "Unknown",
-      courseCategory: courseCategory || "UG",
-      userId: id,
       createdBy: id,
-      createdAt: new Date().toISOString(),
+      department: userDept || department,
+      courseCategory: userCourse || courseCategory || "UG",
     };
+    console.log("Booking payload:", bookingData);
+
+    if (!availableSlots.length) {
+      console.warn("⚠️ No available slots to book.");
+      return;
+    }
 
     try {
       const res = await axios.post(
@@ -187,8 +241,18 @@ const BookSlot = () => {
       );
 
       console.log("✅ Booking response:", res.data);
+      dispatch(setAvailableSlots([]));
+      setBookingSuccessMsg("Booking request was successful!");
     } catch (err) {
       console.error("❌ Booking failed:", err.response?.data || err.message);
+      setBookingErrorMsg(err.response?.data?.message || "Booking failed"); // 🥒 PICKLE: show error immediately
+
+      dispatch({
+        type: "booking/bookPresentationSlot/rejected",
+        error: {
+          message: err.response?.data?.message || "Booking failed",
+        },
+      });
     }
   };
 
@@ -271,15 +335,25 @@ const BookSlot = () => {
         <button
           onClick={handleSearchSlots}
           className="btn btn-primary"
-          disabled={loading}
+          disabled={loading || hasActiveBooking}
         >
           {loading ? "Searching..." : "Search Available Slots"}
         </button>
       </div>
 
       {loading && <Loader message="Searching for available slots..." />}
+      {bookingSuccessMsg && (
+        <div className="card">
+          <div className="alert alert-success">{bookingSuccessMsg}</div>
+        </div>
+      )}
+      {bookingErrorMsg && (
+        <div className="card">
+          <div className="alert alert-danger">{bookingErrorMsg}</div>
+        </div>
+      )}
 
-      {availableSlots.length > 0 && (
+      {!bookingSuccessMsg && availableSlots.length > 0 && (
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Available Slots</h3>
@@ -316,6 +390,7 @@ const BookSlot = () => {
                   onClick={() => handleBookSlot(slot.id)}
                   className="btn btn-success"
                   style={{ width: "100%" }}
+                  disabled={hasActiveBooking}
                 >
                   Book This Slot
                 </button>

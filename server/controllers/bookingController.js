@@ -1,10 +1,18 @@
 import Booking from "../models/Booking.js";
+import Department from "../models/Department.js";
+import Course from "../models/Course.js";
 
 /* -------------------------------------------------------------------------- */
 /*                               SEARCH SLOTS                                 */
 /* -------------------------------------------------------------------------- */
 export const searchSlots = async (req, res) => {
   try {
+    const userId = req.user._id; // ✅ CHANGE: get current user
+    const activeBooking = await Booking.findOne({
+      scholarIds: userId,
+      status: { $in: ["pending", "booked"] },
+    });
+
     const { faculties, date } = req.body;
     const timeSlots = ["9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM"];
     const availableSlots = timeSlots.map((time, idx) => ({
@@ -13,85 +21,66 @@ export const searchSlots = async (req, res) => {
       available: true,
     }));
 
-    res.json({ slots: availableSlots, hasActiveBooking: false });
+    res.json({
+      slots: availableSlots,
+      hasActiveBooking: !!activeBooking, // ✅ CHANGE
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                               BOOK SLOT                                    */
-/* -------------------------------------------------------------------------- */
 export const bookSlot = async (req, res) => {
   try {
-    // ✅ Extract relevant fields
-    const {
+    const user = req.user;
+    const { scholarIds, facultyApprovals, date, startTime, duration, status } =
+      req.body;
+
+    const existingBooking = await Booking.findOne({
+      scholarIds: user._id,
+      status: { $in: ["pending", "booked"] },
+    });
+    if (existingBooking) {
+      return res.status(400).json({
+        message:
+          "You already have an active booking. Please manage your existing booking first.",
+      });
+    }
+
+    // Map department and courseCategory strings to ObjectIds
+    const department = await Department.findOne({ name: user.department });
+    const courseCategory = await Course.findOne({ name: user.courseCategory });
+
+    if (!department) {
+      return res
+        .status(400)
+        .json({ message: `Department '${user.department}' not found` });
+    }
+
+    // Optional: allow courseCategory to be nullable
+    const booking = new Booking({
       scholarIds,
-      facultyIds,
+      facultyApprovals,
+      status: status || "pending",
       date,
       startTime,
       duration,
-      department,
-      courseCategory,
-      createdBy,
-    } = req.body;
-
-    // ✅ Basic validation
-    if (!scholarIds || !facultyIds || !date || !startTime) {
-      return res
-        .status(400)
-        .json({ message: "Missing required fields for booking" });
-    }
-
-    // ✅ Initialize faculty approvals dynamically
-    const facultyApprovals = {};
-    facultyIds.forEach((fid) => {
-      facultyApprovals[fid] = false;
-    });
-
-    // ✅ Construct booking doc according to your schema
-    const newBooking = new Booking({
-      scholarIds,
-      facultyIds,
-      facultyApprovals,
-      status: "pending",
-      date,
-      startTime,
-      duration: duration || 1,
-      department,
-      courseCategory,
-      createdBy,
+      department: department._id,
+      courseCategory: courseCategory ? courseCategory._id : null,
+      createdBy: user._id,
       createdAt: new Date(),
-      updatedBy: createdBy,
+      updatedBy: user._id,
       updatedAt: new Date(),
     });
 
-    await newBooking.save();
-
-    return res.status(201).json({
-      success: true,
-      message: "Slot booked successfully!",
-      booking: newBooking,
-    });
-// inside bookSlot controller catch block
-} catch (err) {
-  console.error("❌ Booking save error:", err);
-
-  // If Mongoose validation error, include details
-  if (err.name === "ValidationError") {
-    const errors = {};
-    for (const key in err.errors) {
-      errors[key] = err.errors[key].message;
-    }
-    return res.status(400).json({
-      message: "Failed to book slot",
-      error: err.message,
-      validationErrors: errors,
-    });
+    const saved = await booking.save();
+    res
+      .status(201)
+      .json({ message: "Booking created successfully", booking: saved });
+  } catch (err) {
+    console.error("❌ Booking creation failed:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
-
-  res.status(500).json({ message: err.message });
-}
 };
 
 /* -------------------------------------------------------------------------- */
@@ -99,7 +88,8 @@ export const bookSlot = async (req, res) => {
 /* -------------------------------------------------------------------------- */
 export const getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ userId: req.params.userId });
+    // adapt query: bookings created by a specific user
+    const bookings = await Booking.find({ createdBy: req.params.userId });
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ message: err.message });
