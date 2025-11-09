@@ -1,7 +1,5 @@
 import { Schema, model } from "mongoose";
 
-const { Schema } = mongoose;
-
 const bookingSchema = new Schema(
   {
     scholarIds: [
@@ -44,4 +42,4 @@ const bookingSchema = new Schema(
   { timestamps: false } // not using built-in timestamps since we manage manually
 );
 
-export default mongoose.model("Booking", bookingSchema);
+export default model("Booking", bookingSchema);

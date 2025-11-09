@@ -111,46 +111,36 @@ const authSlice = createSlice({
         state.email = action.payload.user.email;
         state.role = action.payload.user.role;
         state.isAuthenticated = true;
-        state.error = action.payload.message;
       })
       .addCase(loginUser.rejected, (state, action) => {
-        state.id = null;
         state.loading = false;
-        state.error = action.payload.message;
+        state.error = action.payload.data.message;
       })
 
       // Register Scholar
       .addCase(registerScholar.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(registerScholar.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = action.payload.message;
-        state.authToken = action.payload.token;
-        state.userName = action.payload.user.name;
-        state.email = action.payload.user.email;
-        state.role = action.payload.user.role;
-        state.error = null;
+        state.success = action.payload.data.message;
       })
       .addCase(registerScholar.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload.message;
+        state.error = action.payload.data.message;
       })
 
       // Register Faculty
       .addCase(registerFaculty.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(registerFaculty.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = action.payload.message;
-        state.error = null;
+        state.success = action.payload.data.message;
       })
       .addCase(registerFaculty.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload.data.message;
       });
   }
 });

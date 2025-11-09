@@ -10,6 +10,7 @@ import {
   formateDateToMMMDD,
   formateDateToWWW,
   formateTableDate,
+  getSlotBookStatus,
   getSlotColor,
   getSlotText,
   getWeekDates,
@@ -78,7 +79,8 @@ const ManageFreeSlots = () => {
   };
 
   const handleUpdateCalender = () => {
-    dispatch(updateFacultySlot({facultyId: id, calendarData: newCalender}));
+    dispatch(updateFacultySlot({ facultyId: id, calendarData: newCalender }))
+      .then(() => dispatch(fetchFacultyCalendar(id)))
   }
 
   const weekDates = getWeekDates(newCalender);
@@ -142,7 +144,8 @@ const ManageFreeSlots = () => {
                       }}
                       onClick={() => handleSlotClick(date, time)}
                     >
-                      {getSlotText(date, time, newCalender)}
+                      {getSlotText(date, time, newCalender)}<br />
+                      <div style={{ color: "red" }}>{getSlotBookStatus(date, time, newCalender) ? "\nBooked" : ""}</div>
                     </td>
                   ))}
                 </tr>
@@ -243,10 +246,12 @@ const ManageFreeSlots = () => {
                     checked={selectedSlot.data[category]}
                     onChange={() => handleCategoryToggle(category)}
                     style={{ marginRight: '10px' }}
+                    disabled={selectedSlot.data["bookStatus"]}
                   />
                   {category} Students
                 </label>
               ))}
+              <div style={{ color: "red" }}>{selectedSlot.data["bookStatus"] ? "Cancel/Reject booking to modify the slot" : ""}</div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

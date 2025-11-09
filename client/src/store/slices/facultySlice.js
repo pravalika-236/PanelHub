@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { getDateToday } from '../../components/utils/helperFunctions';
 
 // Dummy API functions
 const dummyAPI = {
@@ -412,6 +413,9 @@ const facultySlice = createSlice({
     confirmedBookings: [],
     approvedBookings: [],
     unapprovedBookings: [],
+    filterDate: getDateToday(),
+    filterTime: "",
+    filterCourse: "",
     loading: false,
     error: null,
     success: null
@@ -429,6 +433,15 @@ const facultySlice = createSlice({
     },
     clearSuccess: (state) => {
       state.success = null;
+    },
+    setDateFilter: (state, action) => {
+      state.filterDate = action.payload;
+    },
+    setTimeFilter: (state, action) => {
+      state.filterTime = action.payload
+    },
+    setCourseFilter: (state, action) => {
+      state.filterCourse = action.payload
     }
   },
   extraReducers: (builder) => {
@@ -563,5 +576,5 @@ const facultySlice = createSlice({
   }
 });
 
-export const { updateCalendarSlot, clearError, clearSuccess } = facultySlice.actions;
+export const { updateCalendarSlot, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } = facultySlice.actions;
 export default facultySlice.reducer;

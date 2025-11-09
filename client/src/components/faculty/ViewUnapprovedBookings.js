@@ -1,18 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchUnapprovedBookings, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess } from '../../store/slices/facultySlice';
+import { fetchUnapprovedBookings, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
 
 const ViewUnapprovedBookings = () => {
   const dispatch = useDispatch();
   const { id } = useSelector(state => state.auth);
-  const { unapprovedBookings, loading, error, success } = useSelector(state => state.faculty);
-  
-  const [filters, setFilters] = useState({
-    date: '',
-    time: '',
-    courseCategory: ''
-  });
+  const { unapprovedBookings, loading, success, filterDate, filterTime, filterCourse  } = useSelector(state => state.faculty);
 
   useEffect(() => {
     dispatch(fetchUnapprovedBookings(id));
@@ -24,20 +18,6 @@ const ViewUnapprovedBookings = () => {
       dispatch(clearSuccess());
     }
   }, [success, dispatch]);
-
-  const handleFilterChange = (filterType, value) => {
-    setFilters({
-      ...filters,
-      [filterType]: value
-    });
-  };
-
-  const filteredBookings = unapprovedBookings.filter(booking => {
-    if (filters.date && booking.date !== filters.date) return false;
-    if (filters.time && booking.time !== filters.time) return false;
-    if (filters.courseCategory && booking.courseCategory !== filters.courseCategory) return false;
-    return true;
-  });
 
   const handleApproveBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to approve this booking request?')) {
@@ -73,47 +53,53 @@ const ViewUnapprovedBookings = () => {
           borderRadius: '5px'
         }}>
           <div>
-            <label className="form-label">Filter by Date</label>
+            <label className="form-label">Filter by Date (MM-DD-YYYY)</label>
             <input
               type="date"
               className="form-control"
-              value={filters.date}
-              onChange={(e) => handleFilterChange('date', e.target.value)}
+              value={filterDate}
+              onChange={(e) => dispatch(setDateFilter(e.target.value))}
             />
           </div>
           <div>
             <label className="form-label">Filter by Time</label>
             <select
               className="form-control"
-              value={filters.time}
-              onChange={(e) => handleFilterChange('time', e.target.value)}
+              value={filterTime}
+              onChange={(e) => dispatch(setTimeFilter(e.target.value))}
             >
               <option value="">All Times</option>
-              <option value="9:00 AM">9:00 AM</option>
-              <option value="10:00 AM">10:00 AM</option>
-              <option value="11:00 AM">11:00 AM</option>
-              <option value="2:00 PM">2:00 PM</option>
-              <option value="3:00 PM">3:00 PM</option>
-              <option value="4:00 PM">4:00 PM</option>
+              <option value="08-09">8:00 AM</option>
+              <option value="09-10">9:00 AM</option>
+              <option value="10-11">10:00 AM</option>
+              <option value="11-12">11:00 AM</option>
+              <option value="12-13">12:00 PM</option>
+              <option value="13-14">1:00 PM</option>
+              <option value="14-15">2:00 PM</option>
+              <option value="15-16">3:00 PM</option>
+              <option value="16-17">4:00 PM</option>
+              <option value="17-18">5:00 PM</option>
+              <option value="18-19">6:00 PM</option>
+              <option value="19-20">7:00 PM</option>
             </select>
           </div>
           <div>
             <label className="form-label">Filter by Course Category</label>
             <select
               className="form-control"
-              value={filters.courseCategory}
-              onChange={(e) => handleFilterChange('courseCategory', e.target.value)}
+              value={filterCourse}
+              onChange={(e) => dispatch(setCourseFilter(e.target.value))}
             >
               <option value="">All Categories</option>
               <option value="UG">UG</option>
               <option value="PG">PG</option>
-              <option value="PhD">PhD</option>
+              <option value="PHD">PHD</option>
             </select>
           </div>
           <button className="btn btn-primary" onClick={() => dispatch(fetchUnapprovedBookings(id))}>Apply Filters</button>
         </div>
 
-        {filteredBookings.length === 0 ? (
+        {unapprovedBookings.length === 0 ? (
           <div className="alert alert-warning">
             <strong>No unapproved bookings found.</strong> 
             {unapprovedBookings.length === 0 
@@ -123,7 +109,7 @@ const ViewUnapprovedBookings = () => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {filteredBookings.map(booking => (
+            {unapprovedBookings.map(booking => (
               <div key={booking.id} style={{
                 border: '1px solid #ddd',
                 borderRadius: '8px',
