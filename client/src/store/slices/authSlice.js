@@ -111,6 +111,8 @@ const authSlice = createSlice({
         state.email = action.payload.user.email;
         state.role = action.payload.user.role;
         state.isAuthenticated = true;
+        state.department = action.payload.user.department;
+        state.courseCategory = action.payload.user?.courseCategory
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -123,7 +125,7 @@ const authSlice = createSlice({
       })
       .addCase(registerScholar.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = action.payload.data.message;
+        state.success = action.payload.message;
       })
       .addCase(registerScholar.rejected, (state, action) => {
         state.loading = false;
@@ -136,7 +138,7 @@ const authSlice = createSlice({
       })
       .addCase(registerFaculty.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = action.payload.data.message;
+        state.success = action.payload.message;
       })
       .addCase(registerFaculty.rejected, (state, action) => {
         state.loading = false;

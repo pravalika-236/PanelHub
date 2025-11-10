@@ -1,262 +1,53 @@
-// ✅ BookSlot.jsx (Restored + Minimal Consistency Fixes)
-// =====================================================
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
+  getFacultyByDepartment,
   searchAvailableSlots,
-  bookPresentationSlot,
-  clearError,
-  clearSuccess,
-  setAvailableSlots, // ✅ CHANGE #1: retain proper Redux action
+  setFilterDateBooking,
 } from "../../store/slices/bookingSlice";
 import Loader from "../common/Loader";
 import Select from "react-select";
-import axios from "axios";
-
-// ✅ CHANGE #2: retain helper for missing department (auth consistency)
-const fetchUserProfile = async (id, token) => {
-  try {
-    const res = await axios.get(`http://localhost:5000/api/users/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.data;
-  } catch (err) {
-    console.error("❌ Failed to fetch user profile:", err.message);
-    return null;
-  }
-};
+import { formatDateToDDMMYYYY, formateTableDate } from "../utils/helperFunctions";
 
 const BookSlot = () => {
   const dispatch = useDispatch();
 
-  // ✅ CHANGE #3: match Redux auth structure from your latest code
   const auth = useSelector((state) => state.auth);
+  const booking = useSelector((state) => state.booking)
+
   const { id, department, courseCategory } = auth;
-  const { availableSlots, hasActiveBooking, loading, error, success } =
-    useSelector((state) => state.booking);
+  const { availableSlots, hasActiveBooking, loading, error, success, filterDateBooking, faculties } = booking;
 
   const [selectedFaculties, setSelectedFaculties] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [facultyData, setFacultyData] = useState([]);
-  const [userDept, setUserDept] = useState(null);
-  const [userCourse, setUserCourse] = useState(null);
 
-  // ✅ CHANGE #4: consistent faculty fetching logic (live data from backend)
   useEffect(() => {
-    const loadFaculties = async () => {
-      const token = auth.authToken || localStorage.getItem("token");
-      if (!id || !token) return;
+    if (id) {
+      dispatch(getFacultyByDepartment(department));
+    }
+  }, [dispatch, id]);
 
-      let dept = department;
-      let courseCat = courseCategory;
 
-      if (!dept || !courseCat) {
-        const profile = await fetchUserProfile(id, token);
-        if (profile?.department) {
-          dept = profile.department;
-          setUserDept(profile.department);
-        }
-        if (profile?.courseCategory) {
-          courseCat = profile.courseCategory;
-          setUserCourse(profile.courseCategory);
-        }
-      } else {
-        setUserDept(dept);
-        setUserCourse(courseCat);
-      }
-
-      try {
-        const res = await axios.get(
-          `http://localhost:5000/api/faculty/faculty?department=${dept}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        const fetchedFaculties = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data.faculties)
-          ? res.data.faculties
-          : [];
-
-        setFacultyData(fetchedFaculties);
-      } catch (err) {
-        console.error("❌ Failed to fetch faculties:", err.message);
-      }
-    };
-
-    if (id) loadFaculties();
-  }, [id, department, courseCategory]);
-
-  const departmentFaculties = userDept
-    ? facultyData.filter((faculty) => faculty.department === userDept)
-    : [];
-
-  const handleFacultyChange = (facultyId) => {
-    const faculty = departmentFaculties.find(
-      (f) => f._id === facultyId || f.id === facultyId
-    );
-    if (
-      selectedFaculties.find((f) => f._id === facultyId || f.id === facultyId)
-    ) {
-      setSelectedFaculties(
-        selectedFaculties.filter(
-          (f) => f._id !== facultyId && f.id !== facultyId
+  const handleFacultySelect = (selectedOptions) => {
+    if (selectedOptions.length <= 3) {
+      const selected = selectedOptions.map((opt) =>
+        faculties.find(
+          (f) => f._id === opt.value || f.id === opt.value
         )
       );
-    } else if (selectedFaculties.length < 3) {
-      setSelectedFaculties([...selectedFaculties, faculty]);
+      setSelectedFaculties(selected);
     }
-  };
+  }
 
-  const handleSearchSlots = async () => {
-    dispatch(clearError());
-    dispatch(clearSuccess());
-    setBookingSuccessMsg(""); // 🥒 PICKLE: Clear previous success message on new search
+  const handleSearchSlots = () => {
+    const facultyIds = selectedFaculties.map(user => user._id);
+    dispatch(searchAvailableSlots({facultyIds: facultyIds, date: formatDateToDDMMYYYY(filterDateBooking), courseCategory: courseCategory}));
+  }
 
-    if (hasActiveBooking) {
-      dispatch({
-        type: "booking/searchAvailableSlots/rejected",
-        error: {
-          message: "You already have an active booking request pending.",
-        }, // 🥒 PICKLE: Show proper message
-      });
-      dispatch(setAvailableSlots([])); // 🥒 PICKLE: Ensure slots grid is empty
-      return;
-    }
+  const handleBookSlot = () => {
+    console.log()
+  }
 
-    if (selectedFaculties.length === 0 || !selectedDate) {
-      dispatch(setAvailableSlots([])); // <-- Clear old slots
-      return;
-    }
-    dispatch(setAvailableSlots([])); // <-- Clear old slots before API call
 
-    const token = auth.authToken || localStorage.getItem("token");
-
-    // ✅ Ensure batch uses fetched live value first
-    const batchToUse = userCourse || courseCategory || "UG";
-
-    console.log("🔍 Debug Common Slot Request:", {
-      facultyIds: selectedFaculties.map((f) => f._id || f.id),
-      date: selectedDate,
-      batch: batchToUse,
-    });
-
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/faculty/common-slots",
-        {
-          facultyIds: selectedFaculties.map((f) => f._id || f.id),
-          date: selectedDate,
-          batch: batchToUse,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      const transformedSlots =
-        res.data?.commonSlots?.flatMap((dayObj) =>
-          (dayObj.blocks || []).map((block) => ({
-            id: `${dayObj.day}-${block}`,
-            time: block,
-            day: dayObj.day,
-          }))
-        ) || [];
-
-      dispatch(clearError());
-      dispatch(clearSuccess());
-
-      if (transformedSlots.length > 0) {
-        dispatch(setAvailableSlots(transformedSlots));
-      } else {
-        dispatch(setAvailableSlots([]));
-        dispatch({
-          type: "booking/searchAvailableSlots/rejected",
-          error: { message: "No common slots available" },
-        });
-      }
-    } catch (err) {
-      console.error("❌ Error fetching common slots:", err);
-      dispatch({
-        type: "booking/searchAvailableSlots/rejected",
-        error: {
-          message:
-            err.response?.data?.message || "Failed to fetch common slots",
-        },
-      });
-    }
-  };
-
-  const [bookingSuccessMsg, setBookingSuccessMsg] = useState("");
-  const [bookingErrorMsg, setBookingErrorMsg] = useState(""); // 🥒 PICKLE: new local error state
-
-  const handleBookSlot = async (slotId) => {
-    if (hasActiveBooking) {
-      dispatch(clearError());
-      setBookingErrorMsg("You already have an active booking!"); // 🥒 PICKLE: show error immediately
-
-      dispatch({
-        type: "booking/bookPresentationSlot/rejected",
-        error: { message: "You already have an active booking" },
-      });
-      return;
-    }
-
-    setBookingErrorMsg(""); // 🥒 PICKLE: clear previous errors on new booking attempt
-
-    const token = auth.authToken || localStorage.getItem("token");
-    const chosen = availableSlots.find((slot) => slot.id === slotId);
-    const chosenTime = chosen?.time || null;
-
-    const facultyIds = selectedFaculties.map((f) => f._id || f.id);
-    const facultyApprovals = {};
-    facultyIds.forEach((fid, index) => {
-      facultyApprovals[`Faculty${index + 1}`] = {
-        facultyId: fid,
-        approveStatus: false,
-      };
-    });
-
-    const bookingData = {
-      scholarIds: [id],
-      facultyApprovals,
-      status: "pending",
-      date: selectedDate ? new Date(selectedDate).toISOString() : null,
-      startTime: chosenTime,
-      duration: 1,
-      createdBy: id,
-      department: userDept || department,
-      courseCategory: userCourse || courseCategory || "UG",
-    };
-    console.log("Booking payload:", bookingData);
-
-    if (!availableSlots.length) {
-      console.warn("⚠️ No available slots to book.");
-      return;
-    }
-
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/bookings/book",
-        bookingData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      console.log("✅ Booking response:", res.data);
-      dispatch(setAvailableSlots([]));
-      setBookingSuccessMsg("Booking request was successful!");
-    } catch (err) {
-      console.error("❌ Booking failed:", err.response?.data || err.message);
-      setBookingErrorMsg(err.response?.data?.message || "Booking failed"); // 🥒 PICKLE: show error immediately
-
-      dispatch({
-        type: "booking/bookPresentationSlot/rejected",
-        error: {
-          message: err.response?.data?.message || "Booking failed",
-        },
-      });
-    }
-  };
-
-  // ✅ UI restored fully, unchanged except for consistent variable names
   return (
     <div>
       <div className="card">
@@ -283,7 +74,7 @@ const BookSlot = () => {
             <label className="form-label">Select Faculty Members (Max 3)</label>
             <Select
               isMulti
-              options={departmentFaculties.map((faculty) => ({
+              options={faculties.map((faculty) => ({
                 value: faculty._id || faculty.id,
                 label: `${faculty.name} (${faculty.email})`,
               }))}
@@ -291,16 +82,7 @@ const BookSlot = () => {
                 value: f._id || f.id,
                 label: `${f.name} (${f.email})`,
               }))}
-              onChange={(selectedOptions) => {
-                if (selectedOptions.length <= 3) {
-                  const selected = selectedOptions.map((opt) =>
-                    departmentFaculties.find(
-                      (f) => f._id === opt.value || f.id === opt.value
-                    )
-                  );
-                  setSelectedFaculties(selected);
-                }
-              }}
+              onChange={(selectedOptions) => handleFacultySelect(selectedOptions)}
               styles={{
                 control: (provided) => ({
                   ...provided,
@@ -325,15 +107,15 @@ const BookSlot = () => {
             <input
               type="date"
               className="form-control"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              value={filterDateBooking}
+              onChange={(e) => dispatch(setFilterDateBooking(e.target.value))}
               min={new Date().toISOString().split("T")[0]}
             />
           </div>
         </div>
 
         <button
-          onClick={handleSearchSlots}
+          onClick={() => handleSearchSlots()}
           className="btn btn-primary"
           disabled={loading || hasActiveBooking}
         >
@@ -342,18 +124,18 @@ const BookSlot = () => {
       </div>
 
       {loading && <Loader message="Searching for available slots..." />}
-      {bookingSuccessMsg && (
+      {success && (
         <div className="card">
-          <div className="alert alert-success">{bookingSuccessMsg}</div>
+          <div className="alert alert-success">{success}</div>
         </div>
       )}
-      {bookingErrorMsg && (
+      {error && (
         <div className="card">
-          <div className="alert alert-danger">{bookingErrorMsg}</div>
+          <div className="alert alert-danger">{error}</div>
         </div>
       )}
 
-      {!bookingSuccessMsg && availableSlots.length > 0 && (
+      {availableSlots.length > 0 && (
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Available Slots</h3>
@@ -381,7 +163,7 @@ const BookSlot = () => {
                 }}
               >
                 <h4 style={{ marginBottom: "10px", color: "#333" }}>
-                  {slot.time}
+                  {formateTableDate(slot)}
                 </h4>
                 <p style={{ marginBottom: "15px", color: "#666" }}>
                   Duration: 1 hour
@@ -418,7 +200,7 @@ const BookSlot = () => {
         </div>
       )}
 
-      {availableSlots.length === 0 && !loading && selectedDate && (
+      {availableSlots.length === 0 && !loading && filterDateBooking && (
         <div className="card">
           <div className="alert alert-warning">
             <strong>No slots available</strong> for the selected date and

@@ -1,5 +1,5 @@
 import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
-import { createDefaultFacultyFreeSlots } from "../utils/supportFunctions.js";
+import { createDefaultFacultyFreeSlots, formatDate, generateDaySlots } from "../utils/supportFunctions.js";
 import asyncHandler from "express-async-handler";
 import User from "../models/User.js";
 import Booking from "../models/Booking.js";
@@ -137,85 +137,135 @@ export async function approveBooking(req, res) {
       }
     );
 
-    res.status(200).json({message: "Approved"})
+    res.status(200).json({ message: "Approved" })
   } catch (error) {
     console.error("unapproveBooking:", error);
     res.status(500).json({ message: "Error getting unapproved booking" });
   }
 }
 
-export const getCommonSlots = asyncHandler(async (req, res) => {
+function findCommonSlots(facultyList, date, courseCategory) {
+
+  const firstFaculty = facultyList[0];
+  const baseSlots = firstFaculty.freeSlot[date];
+
+
+  const commonSlots = Object.keys(baseSlots).filter((time) =>
+    facultyList.every(
+      (faculty) => {
+        return faculty.freeSlot[date][time]?.[courseCategory] === true
+      }
+    )
+  );
+
+  return commonSlots;
+}
+
+export async function getCommonSlots(req, res) {
   try {
-    // Authentication
-    const tokenUser = req.user;
-    if (!tokenUser) {
-      return res.status(401).json({ message: "Not authorized, no token" });
-    }
+    const { facultyIds, date, courseCategory } = req.body;
 
-    // Input validation
-    const { facultyIds, date, batch } = req.body;
-    if (!facultyIds?.length || !date) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
+    const facultyList = await FacultyFreeSlot.find(
+      { facultyId: { $in: facultyIds } },
+      { [`freeSlot.${date}`]: 1, facultyId: 1, _id: 0 }
+    );
 
-    const user = await User.findById(tokenUser.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    const commonsSlots = findCommonSlots(facultyList, date, courseCategory)
 
-    const finalBatch = batch || user.courseCategory || "UG";
-
-    // Normalize date format (YYYY-MM-DD → DD-MM-YYYY)
-    const normalizeDate = (input) => {
-      const d = new Date(input);
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const year = d.getFullYear();
-      return `${day}-${month}-${year}`;
-    };
-    const normalizedDate = normalizeDate(date);
-
-    // Fetch slot documents
-    const freeSlotsDocs = await FacultyFreeSlot.find({
-      facultyId: { $in: facultyIds },
-    }).populate({
-      path: "facultyId",
-      model: "User",
-      match: { role: "Faculty" },
-      select: "name email department",
-    });
-
-    if (!freeSlotsDocs.length) {
-      return res.status(404).json({ message: "No faculty slots found" });
-    }
-
-    // Extract common available blocks
-    const commonBlocks = (() => {
-      const sample = freeSlotsDocs[0]?.freeSlot?.[normalizedDate];
-      if (!sample) return [];
-
-      const allBlocks = Object.keys(sample);
-
-      return allBlocks.filter((block) =>
-        freeSlotsDocs.every((doc) => {
-          const slot = doc.freeSlot?.[normalizedDate]?.[block];
-          return slot && slot[finalBatch] === true && slot.bookStatus === false;
-        })
-      );
-    })();
-
-    // Response
     return res.json({
-      version: "3.3",
       message: "Common slots found successfully",
-      date: normalizedDate,
-      batch: finalBatch,
-      totalFaculties: facultyIds.length,
-      totalCommonBlocks: commonBlocks.length,
-      commonSlots: [{ day: normalizedDate, blocks: commonBlocks }],
+      date: date,
+      courseCategory: courseCategory,
+      commonSlots: commonsSlots,
+      facultyIds: facultyIds
     });
   } catch (error) {
     console.error("Error in getCommonSlots (v3.3):", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
-});
+};
+
+export async function cleanupFacultySlot(req, res) {
+  try {
+    const { facultyId } = req.params;
+
+    const record = await FacultyFreeSlot.findOne({ facultyId });
+    if (!record) {
+      return res.status(404).json({ message: "Faculty not found" });
+    }
+
+    record.freeSlot = cleanupFacultySlotScheduler(facultyId);
+    record.updatedAt = Date.now();
+    await record.save();
+
+    res.status(200).json({
+      message: "Faculty calendar cleaned and updated for next 7 days",
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
+
+export async function cleanupFacultySlotScheduler(facultyId) {
+
+  const record = await FacultyFreeSlot.findOne({ facultyId });
+
+  const today = new Date();
+  const formattedToday = formatDate(today);
+
+  // Filter out past dates
+  const updatedFreeSlot = {};
+  const allDates = Object.keys(record.freeSlot || {});
+
+  const futureDates = allDates.filter(d => {
+    const [day, month, year] = d.split("-").map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    return dateObj >= new Date(today.setHours(0, 0, 0, 0));
+  });
+
+  // Keep future dates only
+  futureDates.forEach(date => {
+    updatedFreeSlot[date] = record.freeSlot[date];
+  });
+
+  // Add new days until total = 7
+  const needed = 7 - futureDates.length;
+  if (needed > 0) {
+    let lastDate = new Date();
+    if (futureDates.length > 0) {
+      const lastFuture = futureDates[futureDates.length - 1];
+      const [d, m, y] = lastFuture.split("-").map(Number);
+      lastDate = new Date(y, m - 1, d);
+    }
+
+    for (let i = 1; i <= needed; i++) {
+      const newDate = new Date(lastDate);
+      newDate.setDate(lastDate.getDate() + i);
+      Object.assign(updatedFreeSlot, generateDaySlots(newDate));
+    }
+  }
+
+  record.freeSlot = updatedFreeSlot;
+  record.updatedAt = Date.now();
+  await record.save();
+
+  return record;
+}
+
+export async function getFacultyGroupByDepartment(req, res) {
+  try {
+    const { department } = req.params;
+
+    const faculties = await User.find({
+      role: "Faculty",
+      department: department
+    });
+
+    res.json(faculties);
+  } catch (error) {
+    console.error("Error in /faculty:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch faculties", error: error.message });
+  }
+}

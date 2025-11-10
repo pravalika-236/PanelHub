@@ -70,3 +70,8 @@ export const getDateToday = () => {
     const formattedToday = today.toISOString().split("T")[0];
     return formattedToday;
 }
+
+export const formatDateToDDMMYYYY = (dateStr) => {
+  const [year, month, day] = dateStr.split("-");
+  return `${day}-${month}-${year}`;
+}
