@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { getDateToday } from '../../components/utils/helperFunctions';
 
 // Dummy API functions
 const dummyAPI = {
@@ -333,42 +334,6 @@ export const updateFacultySlot = createAsyncThunk(
   }
 );
 
-export const fetchConfirmedBookings = createAsyncThunk(
-  'faculty/fetchConfirmedBookings',
-  async (facultyId, { rejectWithValue }) => {
-    try {
-      const response = await dummyAPI.getConfirmedBookings(facultyId);
-      return response;
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
-export const fetchApprovedBookings = createAsyncThunk(
-  'faculty/fetchApprovedBookings',
-  async (facultyId, { rejectWithValue }) => {
-    try {
-      const response = await dummyAPI.getApprovedBookings(facultyId);
-      return response;
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
-export const fetchUnapprovedBookings = createAsyncThunk(
-  'faculty/fetchUnapprovedBookings',
-  async (facultyId, { rejectWithValue }) => {
-    try {
-      const response = await dummyAPI.getUnapprovedBookings(facultyId);
-      return response;
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  }
-);
-
 export const approveBookingRequest = createAsyncThunk(
   'faculty/approveBooking',
   async ({ bookingId, facultyId }, { rejectWithValue }) => {
@@ -405,6 +370,48 @@ export const cancelFacultyBookingRequest = createAsyncThunk(
   }
 );
 
+export const fetchFacultyBookingsUnapproved = createAsyncThunk(
+  'faculty/fetchFacultyBookingsUnapproved',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/faculty/${id}`
+      )
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const fetchConfirmedBookings = createAsyncThunk(
+  'faculty/fetchConfirmedBookings',
+  async (facultyId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/faculty/confirmed/${facultyId}`
+      )
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const fetchFacultyApprovedBookings = createAsyncThunk(
+  'faculty/fetchApprovedBookings',
+  async (facultyId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/faculty/approved/${facultyId}`
+      )
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const facultySlice = createSlice({
   name: 'faculty',
   initialState: {
@@ -412,6 +419,9 @@ const facultySlice = createSlice({
     confirmedBookings: [],
     approvedBookings: [],
     unapprovedBookings: [],
+    filterDate: getDateToday(),
+    filterTime: "",
+    filterCourse: "",
     loading: false,
     error: null,
     success: null
@@ -429,6 +439,15 @@ const facultySlice = createSlice({
     },
     clearSuccess: (state) => {
       state.success = null;
+    },
+    setDateFilter: (state, action) => {
+      state.filterDate = action.payload;
+    },
+    setTimeFilter: (state, action) => {
+      state.filterTime = action.payload
+    },
+    setCourseFilter: (state, action) => {
+      state.filterCourse = action.payload
     }
   },
   extraReducers: (builder) => {
@@ -464,42 +483,26 @@ const facultySlice = createSlice({
       // Fetch Confirmed Bookings
       .addCase(fetchConfirmedBookings.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(fetchConfirmedBookings.fulfilled, (state, action) => {
         state.loading = false;
-        state.confirmedBookings = action.payload;
-        state.error = null;
+        state.confirmedBookings = action.payload.data;
       })
       .addCase(fetchConfirmedBookings.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload.data;
       })
       // Fetch Approved Bookings
-      .addCase(fetchApprovedBookings.pending, (state) => {
+      .addCase(fetchFacultyApprovedBookings.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchApprovedBookings.fulfilled, (state, action) => {
+      .addCase(fetchFacultyApprovedBookings.fulfilled, (state, action) => {
         state.loading = false;
-        state.approvedBookings = action.payload;
+        state.approvedBookings = action.payload.data;
         state.error = null;
       })
-      .addCase(fetchApprovedBookings.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // Fetch Unapproved Bookings
-      .addCase(fetchUnapprovedBookings.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchUnapprovedBookings.fulfilled, (state, action) => {
-        state.loading = false;
-        state.unapprovedBookings = action.payload;
-        state.error = null;
-      })
-      .addCase(fetchUnapprovedBookings.rejected, (state, action) => {
+      .addCase(fetchFacultyApprovedBookings.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -559,9 +562,22 @@ const facultySlice = createSlice({
       .addCase(cancelFacultyBookingRequest.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
+      })
+
+      //faculty unapproved bookings
+      .addCase(fetchFacultyBookingsUnapproved.pending, (state) => {
+        state.loading = true
+      })
+      .addCase(fetchFacultyBookingsUnapproved.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload.data;
+      })
+      .addCase(fetchFacultyBookingsUnapproved.fulfilled, (state, action) => {
+        state.loading = false;
+        state.unapprovedBookings = action.payload.data;
+      })
   }
 });
 
-export const { updateCalendarSlot, clearError, clearSuccess } = facultySlice.actions;
+export const { updateCalendarSlot, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } = facultySlice.actions;
 export default facultySlice.reducer;

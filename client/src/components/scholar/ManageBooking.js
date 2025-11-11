@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchUserBookings, cancelUserBooking, clearError, clearSuccess } from '../../store/slices/bookingSlice';
+import { fetchScholarBookings, cancelUserBooking, clearSuccess } from '../../store/slices/bookingSlice';
 import Loader from '../common/Loader';
+import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ManageBooking = () => {
   const dispatch = useDispatch();
   const { id } = useSelector(state => state.auth);
-  const { userBookings, loading, error, success } = useSelector(state => state.booking);
+  const { scholarBookings, loading, success, faculties } = useSelector(state => state.booking);
 
   useEffect(() => {
-    dispatch(fetchUserBookings(id));
+    if (id) {
+      dispatch(fetchScholarBookings(id));
+    }
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -38,12 +41,9 @@ const ManageBooking = () => {
     }
   };
 
-  if (loading) {
-    return <Loader message="Loading your bookings..." />;
-  }
-
   return (
     <div>
+      {loading && <Loader message='Please Wait' />}
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Manage Your Bookings</h2>
@@ -52,14 +52,13 @@ const ManageBooking = () => {
           </p>
         </div>
 
-        {userBookings.length === 0 ? (
+        {scholarBookings.length === 0 ? (
           <div className="alert alert-warning">
             <strong>No bookings found.</strong> You haven't made any presentation slot bookings yet.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {userBookings.map(booking => (
-              <div key={booking.id} style={{
+              <div key={scholarBookings[0]._id} style={{
                 border: '1px solid #ddd',
                 borderRadius: '8px',
                 padding: '20px',
@@ -71,20 +70,20 @@ const ManageBooking = () => {
                       Presentation Slot
                     </h3>
                     <p style={{ margin: 0, color: '#666' }}>
-                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} | 
-                      <strong> Time:</strong> {booking.time}
+                      <strong>Date:</strong> {new Date(scholarBookings[0].date).toLocaleDateString()} |
+                      <strong> Time:</strong> {scholarBookings[0].time}
                     </p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{
-                      backgroundColor: getStatusColor(booking.status),
+                      backgroundColor: getStatusColor(scholarBookings[0].status),
                       color: 'white',
                       padding: '5px 10px',
                       borderRadius: '15px',
                       fontSize: '12px',
                       fontWeight: 'bold'
                     }}>
-                      {booking.status}
+                      {scholarBookings[0].status}
                     </span>
                   </div>
                 </div>
@@ -92,21 +91,21 @@ const ManageBooking = () => {
                 <div style={{ marginBottom: '15px' }}>
                   <h4 style={{ fontSize: '14px', marginBottom: '10px', color: '#333' }}>Panel Members:</h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {booking.faculties.map(faculty => (
-                      <div key={faculty.id} style={{
+                    {scholarBookings[0].facultyApprovals.map(faculty => (
+                      <div key={faculty.facultyId} style={{
                         padding: '8px 12px',
                         backgroundColor: faculty.approved ? '#d4edda' : '#fff3cd',
                         border: `1px solid ${faculty.approved ? '#c3e6cb' : '#ffeaa7'}`,
                         borderRadius: '5px',
                         fontSize: '12px'
                       }}>
-                        <div style={{ fontWeight: 'bold' }}>{faculty.name}</div>
-                        <div style={{ color: '#666' }}>{faculty.email}</div>
-                        <div style={{ 
-                          color: faculty.approved ? '#155724' : '#856404',
+                        <div style={{ fontWeight: 'bold' }}>{getFacultyNameMapping(faculty.facultyId, faculties)}</div>
+                        <div style={{ color: '#666' }}>{getFacultyEmailMapping(faculty.facultyId, faculties)}</div>
+                        <div style={{
+                          color: faculty.approveStatus ? '#155724' : '#856404',
                           fontWeight: 'bold'
                         }}>
-                          {faculty.approved ? '✓ Approved' : '⏳ Pending'}
+                          {faculty.approveStatus ? 'approved' : 'Pending'}
                         </div>
                       </div>
                     ))}
@@ -115,12 +114,12 @@ const ManageBooking = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <small style={{ color: '#666' }}>
-                    Created: {new Date(booking.createdAt).toLocaleString()}
+                    Created: {new Date(scholarBookings[0].createdAt).toLocaleString()}
                   </small>
                   <div>
-                    {(booking.status === 'Pending' || booking.status === 'Confirmed') && (
+                    {(scholarBookings[0].status === 'pending' || scholarBookings[0].status === 'booked') && (
                       <button
-                        onClick={() => handleCancelBooking(booking.id)}
+                        onClick={() => handleCancelBooking(scholarBookings[0].id)}
                         className="btn btn-danger"
                         style={{ padding: '8px 16px', fontSize: '12px' }}
                       >
@@ -130,7 +129,6 @@ const ManageBooking = () => {
                   </div>
                 </div>
               </div>
-            ))}
           </div>
         )}
       </div>
