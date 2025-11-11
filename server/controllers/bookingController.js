@@ -83,7 +83,7 @@ export const bookSlot = async (req, res) => {
 
 export const getScholarBooking = async (req, res) => {
   try {
-    const bookings = await Booking.find({ scholarId: req.params.scholarId});
+    const bookings = await Booking.find({ scholarId: req.params.scholarId });
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -91,7 +91,7 @@ export const getScholarBooking = async (req, res) => {
 };
 
 
-export const cancelBooking = async (req, res) => {
+export const cancelScholarBooking = async (req, res) => {
   try {
     await Booking.findByIdAndDelete(req.params.bookingId);
     res.json({ success: true, message: "Booking cancelled successfully!" });
@@ -99,3 +99,52 @@ export const cancelBooking = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+export const getFacultyBookingUnapproved = async (req, res) => {
+  try {
+    const { facultyId } = req.params;
+    const bookings = await Booking.find({
+      facultyApprovals: {
+        $elemMatch: {
+          facultyId: facultyId,
+          approveStatus: false,
+        },
+      },
+      status: "pending",
+    });
+    res.json(bookings)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+export const getFacultyBookingApprovedPending = async (req, res) => {
+  try {
+    const { facultyId } = req.params;
+    const bookings = await Booking.find({
+      facultyApprovals: {
+        $elemMatch: {
+          facultyId: facultyId,
+          approveStatus: true,
+        },
+      },
+      status: "pending",
+    });
+    res.json(bookings)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+export const getFacultyBookingBooked = async (req, res) => {
+  try {
+    const { facultyId } = req.params;
+    const bookings = await Booking.find({
+      "facultyApprovals.facultyId": facultyId,
+      status: "booked",
+    });
+    res.json(bookings)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}

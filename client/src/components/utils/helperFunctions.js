@@ -72,20 +72,16 @@ export const getDateToday = () => {
 }
 
 export const formatDateToDDMMYYYY = (dateStr) => {
-  const [year, month, day] = dateStr.split("-");
-  return `${day}-${month}-${year}`;
+    const [year, month, day] = dateStr.split("-");
+    return `${day}-${month}-${year}`;
 }
 
 export const getFacultyNameMapping = (faculty, facultyList) => {
-    console.log(faculty, facultyList)
     const data = facultyList.find(item => item._id === faculty)
-    console.log(data.name)
     return data?.name;
 }
 
 export const getFacultyEmailMapping = (faculty, facultyList) => {
-    console.log(faculty, facultyList)
     const data = facultyList.find(item => item._id === faculty)
-    console.log(data.email)
     return data?.email;
 }

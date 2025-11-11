@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchConfirmedBookings, cancelFacultyBookingRequest, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
+import { getFacultyByDepartment } from '../../store/slices/bookingSlice';
+import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ViewConfirmedBookings = () => {
   const dispatch = useDispatch();
-  const { id } = useSelector(state => state.auth);
+  const { id, department } = useSelector(state => state.auth);
   const { confirmedBookings, loading, success, filterDate, filterTime, filterCourse } = useSelector(state => state.faculty);
+  const { faculties } = useSelector(state => state.booking);
 
   useEffect(() => {
     dispatch(fetchConfirmedBookings(id));
+    dispatch(getFacultyByDepartment(department))
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -150,16 +154,16 @@ const ViewConfirmedBookings = () => {
                 <div style={{ marginBottom: '15px' }}>
                   <h4 style={{ fontSize: '14px', marginBottom: '10px', color: '#333' }}>Panel Members:</h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {booking.faculties.map(faculty => (
+                    {booking.facultyApprovals.map(faculty => (
                       <div key={faculty.id} style={{
                         padding: '8px 12px',
-                        backgroundColor: faculty.id === id ? '#d1ecf1' : '#d4edda',
-                        border: `1px solid ${faculty.id === id ? '#bee5eb' : '#c3e6cb'}`,
+                        backgroundColor: faculty.facultyId === id ? '#d1ecf1' : '#d4edda',
+                        border: `1px solid ${faculty.facultyId === id ? '#bee5eb' : '#c3e6cb'}`,
                         borderRadius: '5px',
                         fontSize: '12px'
                       }}>
-                        <div style={{ fontWeight: 'bold' }}>{faculty.name}</div>
-                        <div style={{ color: '#666' }}>{faculty.email}</div>
+                        <div style={{ fontWeight: 'bold' }}>{getFacultyNameMapping(faculty.facultyId, faculties)}</div>
+                        <div style={{ color: '#666' }}>{getFacultyEmailMapping(faculty.facultyId, faculties)}</div>
                         {faculty.id === id && (
                           <div style={{ color: '#0c5460', fontWeight: 'bold' }}>You</div>
                         )}
@@ -170,7 +174,7 @@ const ViewConfirmedBookings = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <small style={{ color: '#666' }}>
-                    Confirmed: {new Date(booking.confirmedAt).toLocaleString()}
+                    Confirmed: {new Date(booking.updatedAt).toLocaleString()}
                   </small>
                   <button
                     onClick={() => handleCancelBooking(booking.id)}

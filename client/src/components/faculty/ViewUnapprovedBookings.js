@@ -1,15 +1,20 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchUnapprovedBookings, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } from '../../store/slices/facultySlice';
+import { fetchFacultyBookingsUnapproved, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
+import { getFacultyByDepartment } from '../../store/slices/bookingSlice';
+import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ViewUnapprovedBookings = () => {
   const dispatch = useDispatch();
   const { id } = useSelector(state => state.auth);
-  const { unapprovedBookings, loading, success, filterDate, filterTime, filterCourse  } = useSelector(state => state.faculty);
+  const { unapprovedBookings, loading, success, filterDate, filterTime, filterCourse } = useSelector(state => state.faculty);
+  const { department } = useSelector(state => state.auth);
+  const { faculties } = useSelector(state => state.booking)
 
   useEffect(() => {
-    dispatch(fetchUnapprovedBookings(id));
+    dispatch(fetchFacultyBookingsUnapproved(id));
+    dispatch(getFacultyByDepartment(department))
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -43,9 +48,9 @@ const ViewUnapprovedBookings = () => {
         </div>
 
         {/* Filters */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '15px',
           marginBottom: '20px',
           padding: '15px',
@@ -96,13 +101,13 @@ const ViewUnapprovedBookings = () => {
               <option value="PHD">PHD</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => dispatch(fetchUnapprovedBookings(id))}>Apply Filters</button>
+          <button className="btn btn-primary" onClick={() => dispatch(fetchFacultyBookingsUnapproved(id))}>Apply Filters</button>
         </div>
 
         {unapprovedBookings.length === 0 ? (
           <div className="alert alert-warning">
-            <strong>No unapproved bookings found.</strong> 
-            {unapprovedBookings.length === 0 
+            <strong>No unapproved bookings found.</strong>
+            {unapprovedBookings.length === 0
               ? " You don't have any pending booking requests."
               : " Try adjusting your filters."
             }
@@ -122,8 +127,8 @@ const ViewUnapprovedBookings = () => {
                       Presentation Booking Request
                     </h3>
                     <p style={{ margin: 0, color: '#666' }}>
-                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} | 
-                      <strong> Time:</strong> {booking.time} | 
+                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} |
+                      <strong> Time:</strong> {booking.time} |
                       <strong> Duration:</strong> 1 hour
                     </p>
                   </div>
@@ -145,8 +150,8 @@ const ViewUnapprovedBookings = () => {
                   <h4 style={{ fontSize: '14px', marginBottom: '10px', color: '#333' }}>Scholar Details:</h4>
                   <div style={{ padding: '10px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
                     <p style={{ margin: 0 }}>
-                      <strong>Name:</strong> {booking.scholarName}<br />
-                      <strong>Email:</strong> {booking.scholarEmail}<br />
+                      <strong>Name:</strong> {booking?.scholarName}<br />
+                      <strong>Email:</strong> {booking?.scholarEmail}<br />
                       <strong>Course Category:</strong> {booking.courseCategory}<br />
                       <strong>Department:</strong> {booking.department}
                     </p>
@@ -156,23 +161,23 @@ const ViewUnapprovedBookings = () => {
                 <div style={{ marginBottom: '15px' }}>
                   <h4 style={{ fontSize: '14px', marginBottom: '10px', color: '#333' }}>Panel Members Status:</h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {booking.faculties.map(faculty => (
+                    {booking.facultyApprovals.map(faculty => (
                       <div key={faculty.id} style={{
                         padding: '8px 12px',
-                        backgroundColor: faculty.approved ? '#d4edda' : '#fff3cd',
-                        border: `1px solid ${faculty.approved ? '#c3e6cb' : '#ffeaa7'}`,
+                        backgroundColor: faculty.approveStatus ? '#d4edda' : '#fff3cd',
+                        border: `1px solid ${faculty.approveStatus ? '#c3e6cb' : '#ffeaa7'}`,
                         borderRadius: '5px',
                         fontSize: '12px'
                       }}>
-                        <div style={{ fontWeight: 'bold' }}>{faculty.name}</div>
-                        <div style={{ color: '#666' }}>{faculty.email}</div>
-                        <div style={{ 
-                          color: faculty.approved ? '#155724' : '#856404',
+                        <div style={{ fontWeight: 'bold' }}>{getFacultyNameMapping(faculty.facultyId, faculties)}</div>
+                        <div style={{ color: '#666' }}>{getFacultyEmailMapping(faculty.facultyId, faculties)}</div>
+                        <div style={{
+                          color: faculty.approveStatus ? '#155724' : '#856404',
                           fontWeight: 'bold'
                         }}>
-                          {faculty.approved ? '✓ Approved' : '⏳ Pending'}
+                          {faculty.approveStatus ? '✓ Approved' : '⏳ Pending'}
                         </div>
-                        {faculty.id === id && (
+                        {faculty.facultyId === id && (
                           <div style={{ color: '#0c5460', fontWeight: 'bold' }}>You</div>
                         )}
                       </div>

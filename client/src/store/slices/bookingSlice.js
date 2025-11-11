@@ -37,7 +37,7 @@ export const fetchScholarBookings = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/bookings/user/${id}`
+        `http://localhost:5000/api/bookings/scholar/${id}`
       )
       return response;
     } catch (error) {
