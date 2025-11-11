@@ -1,6 +1,5 @@
 import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
 import { createDefaultFacultyFreeSlots, formatDate, generateDaySlots } from "../utils/supportFunctions.js";
-import asyncHandler from "express-async-handler";
 import User from "../models/User.js";
 import Booking from "../models/Booking.js";
 
@@ -32,7 +31,6 @@ export async function persistCalender(facultyId) {
     });
 
     await newRecord.save();
-    console.log(`Default calendar created for faculty: ${facultyId}`);
   } catch (err) {
     console.error("persistCalender error:", err);
   }

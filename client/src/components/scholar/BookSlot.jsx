@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
+  bookPresentationSlot,
   getFacultyByDepartment,
   searchAvailableSlots,
   setFilterDateBooking,
@@ -16,7 +17,7 @@ const BookSlot = () => {
   const booking = useSelector((state) => state.booking)
 
   const { id, department, courseCategory } = auth;
-  const { availableSlots, hasActiveBooking, loading, error, success, filterDateBooking, faculties } = booking;
+  const { availableSlots, hasActiveBooking, loading, error, success, filterDateBooking, faculties, availableSlotDetails } = booking;
 
   const [selectedFaculties, setSelectedFaculties] = useState([]);
 
@@ -40,11 +41,19 @@ const BookSlot = () => {
 
   const handleSearchSlots = () => {
     const facultyIds = selectedFaculties.map(user => user._id);
-    dispatch(searchAvailableSlots({facultyIds: facultyIds, date: formatDateToDDMMYYYY(filterDateBooking), courseCategory: courseCategory}));
+    dispatch(searchAvailableSlots({ facultyIds: facultyIds, date: formatDateToDDMMYYYY(filterDateBooking), courseCategory: courseCategory }));
   }
 
-  const handleBookSlot = () => {
-    console.log()
+  const handleBookSlot = (slot) => {
+    const bookingData = {
+      scholarId: id,
+      facultyIds: availableSlotDetails.facultyIds,
+      date: formatDateToDDMMYYYY(filterDateBooking),
+      time: slot,
+      department: department,
+      courseCategory: courseCategory
+    }
+    dispatch(bookPresentationSlot(bookingData))
   }
 
 
@@ -169,7 +178,7 @@ const BookSlot = () => {
                   Duration: 1 hour
                 </p>
                 <button
-                  onClick={() => handleBookSlot(slot.id)}
+                  onClick={() => handleBookSlot(slot)}
                   className="btn btn-success"
                   style={{ width: "100%" }}
                   disabled={hasActiveBooking}

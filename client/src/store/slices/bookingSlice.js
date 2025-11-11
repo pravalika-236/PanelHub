@@ -21,7 +21,10 @@ export const bookPresentationSlot = createAsyncThunk(
   'booking/bookSlot',
   async (bookingData, { rejectWithValue }) => {
     try {
-      const response = null
+      const response = await axios.post(
+        "http://localhost:5000/api/bookings/book",
+        bookingData
+      )
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -29,11 +32,13 @@ export const bookPresentationSlot = createAsyncThunk(
   }
 );
 
-export const fetchUserBookings = createAsyncThunk(
-  'booking/fetchUserBookings',
-  async (userId, { rejectWithValue }) => {
+export const fetchScholarBookings = createAsyncThunk(
+  'booking/fetchScholarBookings',
+  async (id, { rejectWithValue }) => {
     try {
-      const response = null
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/user/${id}`
+      )
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -72,7 +77,7 @@ const bookingSlice = createSlice({
   initialState: {
     availableSlots: [],
     availableSlotDetails: null,
-    userBookings: [],
+    scholarBookings: [],
     hasActiveBooking: false,
     loading: false,
     error: null,
@@ -91,7 +96,7 @@ const bookingSlice = createSlice({
       state.success = null;
     },
     setFilterDateBooking: (state, action) => {
-      state.filterDate = action.payload;
+      state.filterDateBooking = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -119,29 +124,26 @@ const bookingSlice = createSlice({
         state.loading = false;
         state.success = action.payload.message;
         state.availableSlots = [];
-        state.userBookings.push(action.payload.booking);
         state.error = null;
-
-        state.hasActiveBooking = true;
       })
       .addCase(bookPresentationSlot.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
       })
+
       // Fetch User Bookings
-      .addCase(fetchUserBookings.pending, (state) => {
+      .addCase(fetchScholarBookings.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
-      .addCase(fetchUserBookings.fulfilled, (state, action) => {
+      .addCase(fetchScholarBookings.fulfilled, (state, action) => {
         state.loading = false;
-        state.userBookings = action.payload;
-        state.error = null;
+        state.scholarBookings = action.payload.data;
       })
-      .addCase(fetchUserBookings.rejected, (state, action) => {
+      .addCase(fetchScholarBookings.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
+
       // Cancel Booking
       .addCase(cancelUserBooking.pending, (state) => {
         state.loading = true;
@@ -158,6 +160,7 @@ const bookingSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+
       // fetching faculty by department
       .addCase(getFacultyByDepartment.pending, (state) => {
         state.loading = true;

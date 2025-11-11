@@ -2,24 +2,14 @@ import { Schema, model } from "mongoose";
 
 const bookingSchema = new Schema(
   {
-    scholarIds: [
-      { type: Schema.Types.ObjectId, ref: "User", required: true }
-    ],
+    scholarId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
-    facultyApprovals: {
-      Faculty1: {
+    facultyApprovals: [
+      {
         facultyId: { type: Schema.Types.ObjectId, ref: "User" },
-        approveStatus: { type: Boolean, default: false },
-      },  
-      Faculty2: {
-        facultyId: { type: Schema.Types.ObjectId, ref: "User" },
-        approveStatus: { type: Boolean, default: false },
+        approveStatus: { type: Boolean, default: false }
       },
-      Faculty3: {
-        facultyId: { type: Schema.Types.ObjectId, ref: "User" },
-        approveStatus: { type: Boolean, default: false },
-      },
-    },
+    ],
 
     status: {
       type: String,
@@ -27,12 +17,12 @@ const bookingSchema = new Schema(
       default: "pending",
     },
 
-    date: { type: Date, required: true },
-    startTime: { type: String, required: true }, // e.g. "10:00"
+    date: { type: String, required: true },
+    time: { type: String, required: true }, // e.g. "10:00"
     duration: { type: Number, default: 1 }, // always 1 hour
 
-    department: { type: Schema.Types.ObjectId, ref: "Department", required: true },
-    courseCategory: { type: Schema.Types.ObjectId, ref: "CourseCategory", required: true },
+    department: { type: String, required: true },
+    courseCategory: { type: String, required: true },
 
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     createdAt: { type: Date, default: Date.now },

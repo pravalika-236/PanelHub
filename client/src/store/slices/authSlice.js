@@ -36,7 +36,7 @@ export const registerScholar = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response);
     }
   }
 );
@@ -56,7 +56,7 @@ export const registerFaculty = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.response);
     }
   }
 );

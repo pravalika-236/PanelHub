@@ -2,12 +2,9 @@ import Booking from "../models/Booking.js";
 import Department from "../models/Department.js";
 import Course from "../models/Course.js";
 
-/* -------------------------------------------------------------------------- */
-/*                               SEARCH SLOTS                                 */
-/* -------------------------------------------------------------------------- */
 export const searchSlots = async (req, res) => {
   try {
-    const userId = req.user._id; // ✅ CHANGE: get current user
+    const userId = req.user._id;
     const activeBooking = await Booking.findOne({
       scholarIds: userId,
       status: { $in: ["pending", "booked"] },
@@ -23,7 +20,7 @@ export const searchSlots = async (req, res) => {
 
     res.json({
       slots: availableSlots,
-      hasActiveBooking: !!activeBooking, // ✅ CHANGE
+      hasActiveBooking: !!activeBooking,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -32,12 +29,10 @@ export const searchSlots = async (req, res) => {
 
 export const bookSlot = async (req, res) => {
   try {
-    const user = req.user;
-    const { scholarIds, facultyApprovals, date, startTime, duration, status } =
-      req.body;
+    const { scholarId, facultyIds, date, time, department, courseCategory } = req.body;
 
     const existingBooking = await Booking.findOne({
-      scholarIds: user._id,
+      scholarIds: scholarId,
       status: { $in: ["pending", "booked"] },
     });
     if (existingBooking) {
@@ -47,29 +42,31 @@ export const bookSlot = async (req, res) => {
       });
     }
 
-    // Map department and courseCategory strings to ObjectIds
-    const department = await Department.findOne({ name: user.department });
-    const courseCategory = await Course.findOne({ name: user.courseCategory });
-
     if (!department) {
       return res
         .status(400)
-        .json({ message: `Department '${user.department}' not found` });
+        .json({ message: `Department '${department}' not found` });
     }
 
-    // Optional: allow courseCategory to be nullable
+    const facultyApprovals = facultyIds.map((id) => {
+      return {
+        facultyId: id,
+        approveStatus: false
+      }
+    })
+
     const booking = new Booking({
-      scholarIds,
-      facultyApprovals,
-      status: status || "pending",
-      date,
-      startTime,
-      duration,
-      department: department._id,
-      courseCategory: courseCategory ? courseCategory._id : null,
-      createdBy: user._id,
+      scholarId: scholarId,
+      facultyApprovals: facultyApprovals,
+      status: "pending",
+      date: date,
+      time: time,
+      duration: 1,
+      department: department,
+      courseCategory: courseCategory,
+      createdBy: scholarId,
       createdAt: new Date(),
-      updatedBy: user._id,
+      updatedBy: scholarId,
       updatedAt: new Date(),
     });
 
@@ -78,27 +75,22 @@ export const bookSlot = async (req, res) => {
       .status(201)
       .json({ message: "Booking created successfully", booking: saved });
   } catch (err) {
-    console.error("❌ Booking creation failed:", err);
+    console.error("Booking creation failed:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             USER BOOKINGS                                  */
-/* -------------------------------------------------------------------------- */
-export const getUserBookings = async (req, res) => {
+
+export const getScholarBooking = async (req, res) => {
   try {
-    // adapt query: bookings created by a specific user
-    const bookings = await Booking.find({ createdBy: req.params.userId });
+    const bookings = await Booking.find({ scholarId: req.params.scholarId});
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                              CANCEL BOOKING                                */
-/* -------------------------------------------------------------------------- */
+
 export const cancelBooking = async (req, res) => {
   try {
     await Booking.findByIdAndDelete(req.params.bookingId);
