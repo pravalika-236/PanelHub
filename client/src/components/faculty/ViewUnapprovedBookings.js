@@ -1,21 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchUnapprovedBookings, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess } from '../../store/slices/facultySlice';
+import { fetchFacultyBookingsUnapproved, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter, cancelFacultyBookingRequest } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
+import { getFacultyByDepartment } from '../../store/slices/bookingSlice';
+import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ViewUnapprovedBookings = () => {
   const dispatch = useDispatch();
   const { id } = useSelector(state => state.auth);
-  const { unapprovedBookings, loading, error, success } = useSelector(state => state.faculty);
-  
-  const [filters, setFilters] = useState({
-    date: '',
-    time: '',
-    courseCategory: ''
-  });
+  const { unapprovedBookings, loading, success, filterDate, filterTime, filterCourse } = useSelector(state => state.faculty);
+  const { department } = useSelector(state => state.auth);
+  const { faculties } = useSelector(state => state.booking)
 
   useEffect(() => {
-    dispatch(fetchUnapprovedBookings(id));
+    dispatch(fetchFacultyBookingsUnapproved(id));
+    dispatch(getFacultyByDepartment(department))
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -25,38 +24,29 @@ const ViewUnapprovedBookings = () => {
     }
   }, [success, dispatch]);
 
-  const handleFilterChange = (filterType, value) => {
-    setFilters({
-      ...filters,
-      [filterType]: value
-    });
-  };
-
-  const filteredBookings = unapprovedBookings.filter(booking => {
-    if (filters.date && booking.date !== filters.date) return false;
-    if (filters.time && booking.time !== filters.time) return false;
-    if (filters.courseCategory && booking.courseCategory !== filters.courseCategory) return false;
-    return true;
-  });
-
   const handleApproveBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to approve this booking request?')) {
-      dispatch(approveBookingRequest({ bookingId, facultyId: id }));
+      dispatch(approveBookingRequest({ id: bookingId, facultyId: id }));
     }
   };
 
-  const handleRejectBooking = async (bookingId) => {
+  const handleRejectBooking = async (bookingId, date, time, facultyIds, cancelFacultyId) => {
     if (window.confirm('Are you sure you want to reject this booking request? This will cancel the booking for all participants.')) {
-      dispatch(rejectBookingRequest({ bookingId, facultyId: id }));
+      dispatch(cancelFacultyBookingRequest(
+        {
+          id: bookingId,
+          date: date,
+          time: time,
+          facultyIds: facultyIds.map(faculty => faculty.facultyId),
+          cancelFacultyId: cancelFacultyId
+        }
+      ));
     }
   };
-
-  if (loading) {
-    return <Loader message="Loading booking requests..." />;
-  }
 
   return (
     <div>
+      {loading && <Loader message='Please Wait' />}
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">View Unapproved Bookings</h2>
@@ -66,9 +56,9 @@ const ViewUnapprovedBookings = () => {
         </div>
 
         {/* Filters */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '15px',
           marginBottom: '20px',
           padding: '15px',
@@ -76,57 +66,63 @@ const ViewUnapprovedBookings = () => {
           borderRadius: '5px'
         }}>
           <div>
-            <label className="form-label">Filter by Date</label>
+            <label className="form-label">Filter by Date (MM-DD-YYYY)</label>
             <input
               type="date"
               className="form-control"
-              value={filters.date}
-              onChange={(e) => handleFilterChange('date', e.target.value)}
+              value={filterDate}
+              onChange={(e) => dispatch(setDateFilter(e.target.value))}
             />
           </div>
           <div>
             <label className="form-label">Filter by Time</label>
             <select
               className="form-control"
-              value={filters.time}
-              onChange={(e) => handleFilterChange('time', e.target.value)}
+              value={filterTime}
+              onChange={(e) => dispatch(setTimeFilter(e.target.value))}
             >
               <option value="">All Times</option>
-              <option value="9:00 AM">9:00 AM</option>
-              <option value="10:00 AM">10:00 AM</option>
-              <option value="11:00 AM">11:00 AM</option>
-              <option value="2:00 PM">2:00 PM</option>
-              <option value="3:00 PM">3:00 PM</option>
-              <option value="4:00 PM">4:00 PM</option>
+              <option value="08-09">8:00 AM</option>
+              <option value="09-10">9:00 AM</option>
+              <option value="10-11">10:00 AM</option>
+              <option value="11-12">11:00 AM</option>
+              <option value="12-13">12:00 PM</option>
+              <option value="13-14">1:00 PM</option>
+              <option value="14-15">2:00 PM</option>
+              <option value="15-16">3:00 PM</option>
+              <option value="16-17">4:00 PM</option>
+              <option value="17-18">5:00 PM</option>
+              <option value="18-19">6:00 PM</option>
+              <option value="19-20">7:00 PM</option>
             </select>
           </div>
           <div>
             <label className="form-label">Filter by Course Category</label>
             <select
               className="form-control"
-              value={filters.courseCategory}
-              onChange={(e) => handleFilterChange('courseCategory', e.target.value)}
+              value={filterCourse}
+              onChange={(e) => dispatch(setCourseFilter(e.target.value))}
             >
               <option value="">All Categories</option>
               <option value="UG">UG</option>
               <option value="PG">PG</option>
-              <option value="PhD">PhD</option>
+              <option value="PHD">PHD</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => dispatch(fetchUnapprovedBookings(id))}>Apply Filters</button>
+          <button className="btn btn-primary" onClick={() => dispatch(fetchFacultyBookingsUnapproved(id))}>Apply Filters</button>
         </div>
 
-        {filteredBookings.length === 0 ? (
+        {unapprovedBookings.length === 0 ? (
           <div className="alert alert-warning">
-            <strong>No unapproved bookings found.</strong> 
-            {unapprovedBookings.length === 0 
+            <strong>No unapproved bookings found.</strong>
+            {unapprovedBookings.length === 0
               ? " You don't have any pending booking requests."
               : " Try adjusting your filters."
             }
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {filteredBookings.map(booking => (
+            {unapprovedBookings.map(booking => (
               <div key={booking.id} style={{
                 border: '1px solid #ddd',
                 borderRadius: '8px',
@@ -139,8 +135,8 @@ const ViewUnapprovedBookings = () => {
                       Presentation Booking Request
                     </h3>
                     <p style={{ margin: 0, color: '#666' }}>
-                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} | 
-                      <strong> Time:</strong> {booking.time} | 
+                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} |
+                      <strong> Time:</strong> {booking.time} |
                       <strong> Duration:</strong> 1 hour
                     </p>
                   </div>
@@ -162,8 +158,8 @@ const ViewUnapprovedBookings = () => {
                   <h4 style={{ fontSize: '14px', marginBottom: '10px', color: '#333' }}>Scholar Details:</h4>
                   <div style={{ padding: '10px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
                     <p style={{ margin: 0 }}>
-                      <strong>Name:</strong> {booking.scholarName}<br />
-                      <strong>Email:</strong> {booking.scholarEmail}<br />
+                      <strong>Name:</strong> {booking?.scholarName}<br />
+                      <strong>Email:</strong> {booking?.scholarEmail}<br />
                       <strong>Course Category:</strong> {booking.courseCategory}<br />
                       <strong>Department:</strong> {booking.department}
                     </p>
@@ -173,23 +169,23 @@ const ViewUnapprovedBookings = () => {
                 <div style={{ marginBottom: '15px' }}>
                   <h4 style={{ fontSize: '14px', marginBottom: '10px', color: '#333' }}>Panel Members Status:</h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {booking.faculties.map(faculty => (
+                    {booking.facultyApprovals.map(faculty => (
                       <div key={faculty.id} style={{
                         padding: '8px 12px',
-                        backgroundColor: faculty.approved ? '#d4edda' : '#fff3cd',
-                        border: `1px solid ${faculty.approved ? '#c3e6cb' : '#ffeaa7'}`,
+                        backgroundColor: faculty.approveStatus ? '#d4edda' : '#fff3cd',
+                        border: `1px solid ${faculty.approveStatus ? '#c3e6cb' : '#ffeaa7'}`,
                         borderRadius: '5px',
                         fontSize: '12px'
                       }}>
-                        <div style={{ fontWeight: 'bold' }}>{faculty.name}</div>
-                        <div style={{ color: '#666' }}>{faculty.email}</div>
-                        <div style={{ 
-                          color: faculty.approved ? '#155724' : '#856404',
+                        <div style={{ fontWeight: 'bold' }}>{getFacultyNameMapping(faculty.facultyId, faculties)}</div>
+                        <div style={{ color: '#666' }}>{getFacultyEmailMapping(faculty.facultyId, faculties)}</div>
+                        <div style={{
+                          color: faculty.approveStatus ? '#155724' : '#856404',
                           fontWeight: 'bold'
                         }}>
-                          {faculty.approved ? '✓ Approved' : '⏳ Pending'}
+                          {faculty.approveStatus ? '✓ Approved' : '⏳ Pending'}
                         </div>
-                        {faculty.id === id && (
+                        {faculty.facultyId === id && (
                           <div style={{ color: '#0c5460', fontWeight: 'bold' }}>You</div>
                         )}
                       </div>
@@ -203,14 +199,14 @@ const ViewUnapprovedBookings = () => {
                   </small>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
-                      onClick={() => handleRejectBooking(booking.id)}
+                      onClick={() => handleRejectBooking(booking._id, booking.date, booking.time, booking.facultyApprovals, id)}
                       className="btn btn-danger"
                       style={{ padding: '8px 16px', fontSize: '12px' }}
                     >
                       Reject
                     </button>
                     <button
-                      onClick={() => handleApproveBooking(booking.id)}
+                      onClick={() => handleApproveBooking(booking._id, id)}
                       className="btn btn-success"
                       style={{ padding: '8px 16px', fontSize: '12px' }}
                     >

@@ -1,12 +1,10 @@
-import React from 'react';
+import './Spinner.css';
 
 const Loader = ({ message = "Loading..." }) => {
   return (
-    <div className="loader">
-      <div style={{ textAlign: 'center' }}>
-        <div className="spinner"></div>
-        <p style={{ marginTop: '15px', color: '#666' }}>{message}</p>
-      </div>
+    <div className="full-screen-overlay">
+      <div className="spinner"></div>
+      <div>{message}</div>
     </div>
   );
 };

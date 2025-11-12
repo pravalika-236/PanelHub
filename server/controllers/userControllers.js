@@ -33,7 +33,7 @@ export async function registerScholarUser(req, res) {
         email: newUser.email,
         role: newUser.role,
         department: newUser.department,
-        courseCategory: newUser.courseCategory
+        courseCategory: newUser?.courseCategory
       },
     });
   } catch (error) {
@@ -97,6 +97,8 @@ export async function loginUser(req, res) {
         name: user.name,
         email: user.email,
         role: user.role,
+        department: user.department,
+        courseCategory: user.courseCategory
       },
     });
   } catch (error) {

@@ -54,6 +54,34 @@ export const getSlotText = (date, time, calendar) => {
     if (!slot) return '';
 
     return Object.keys(slot)
-        .filter(key => slot[key])
+        .filter(key => slot[key] && key != "bookStatus")
         .join('/');
 };
+
+export const getSlotBookStatus = (date, time, calendar) => {
+    const slot = calendar[date]?.[time];
+    if (!slot) return false;
+
+    return slot["bookStatus"]
+};
+
+export const getDateToday = () => {
+    const today = new Date();
+    const formattedToday = today.toISOString().split("T")[0];
+    return formattedToday;
+}
+
+export const formatDateToDDMMYYYY = (dateStr) => {
+    const [year, month, day] = dateStr.split("-");
+    return `${day}-${month}-${year}`;
+}
+
+export const getFacultyNameMapping = (faculty, facultyList) => {
+    const data = facultyList.find(item => item._id === faculty)
+    return data?.name;
+}
+
+export const getFacultyEmailMapping = (faculty, facultyList) => {
+    const data = facultyList.find(item => item._id === faculty)
+    return data?.email;
+}

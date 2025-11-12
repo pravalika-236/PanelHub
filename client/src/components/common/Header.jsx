@@ -31,7 +31,7 @@ const Header = () => {
       {userName && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ fontSize: '16px' }}>
-            Welcome, {userName} ({role === 'scholar' ? 'Scholar' : 'Faculty'})
+            Welcome, {userName} ({role === 'Scholar' ? 'Scholar' : 'Faculty'})
           </span>
           <button 
             onClick={handleLogout}
