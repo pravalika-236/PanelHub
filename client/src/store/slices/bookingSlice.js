@@ -46,11 +46,14 @@ export const fetchScholarBookings = createAsyncThunk(
   }
 );
 
-export const cancelUserBooking = createAsyncThunk(
+export const cancelScholarBooking = createAsyncThunk(
   'booking/cancelBooking',
-  async (bookingId, { rejectWithValue }) => {
+  async (bookingData, { rejectWithValue }) => {
     try {
-      const response = null
+      const response = await axios.put(
+        "http://localhost:5000/api/bookings/scholar/cancel",
+        bookingData
+      )
       return response;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -145,18 +148,15 @@ const bookingSlice = createSlice({
       })
 
       // Cancel Booking
-      .addCase(cancelUserBooking.pending, (state) => {
+      .addCase(cancelScholarBooking.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
-      .addCase(cancelUserBooking.fulfilled, (state, action) => {
+      .addCase(cancelScholarBooking.fulfilled, (state, action) => {
         state.loading = false;
         state.success = action.payload.message;
         state.error = null;
-
-        state.hasActiveBooking = false;
       })
-      .addCase(cancelUserBooking.rejected, (state, action) => {
+      .addCase(cancelScholarBooking.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

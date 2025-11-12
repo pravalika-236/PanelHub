@@ -7,19 +7,31 @@ import {
   getFacultyBookingUnapproved,
   getFacultyBookingApprovedPending,
   getFacultyBookingBooked,
+  cancelFacultyBooking,
+  approveFacultyBooking,
 } from "../controllers/bookingController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 router.post("/search", searchSlots);
+
 router.post("/book", bookSlot);
+
 router.get("/scholar/:scholarId", getScholarBooking);
+
 router.delete("/:bookingId", protect, cancelScholarBooking);
+
 router.get("/faculty/:facultyId", getFacultyBookingUnapproved);
 
 router.get("/faculty/approved/:facultyId", getFacultyBookingApprovedPending)
 
 router.get("/faculty/confirmed/:facultyId", getFacultyBookingBooked)
+
+router.put("/scholar/cancel", cancelScholarBooking)
+
+router.put("/faculty/cancel", cancelFacultyBooking)
+
+router.put("/faculty/approve", approveFacultyBooking)
 
 export default router;
