@@ -336,10 +336,13 @@ export const updateFacultySlot = createAsyncThunk(
 
 export const approveBookingRequest = createAsyncThunk(
   'faculty/approveBooking',
-  async ({ bookingId, facultyId }, { rejectWithValue }) => {
+  async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await dummyAPI.approveBooking(bookingId, facultyId);
-      return { response, bookingId };
+      const response = await axios.put(
+        "http://localhost:5000/api/bookings/faculty/approve",
+        bookingData
+      )
+      return response;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -348,10 +351,13 @@ export const approveBookingRequest = createAsyncThunk(
 
 export const rejectBookingRequest = createAsyncThunk(
   'faculty/rejectBooking',
-  async ({ bookingId, facultyId }, { rejectWithValue }) => {
+  async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await dummyAPI.rejectBooking(bookingId, facultyId);
-      return { response, bookingId };
+      const response = await axios.put(
+        "http://localhost:5000/api/bookings/faculty/reject",
+        bookingData
+      )
+      return response;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -360,10 +366,13 @@ export const rejectBookingRequest = createAsyncThunk(
 
 export const cancelFacultyBookingRequest = createAsyncThunk(
   'faculty/cancelBooking',
-  async ({ bookingId, facultyId }, { rejectWithValue }) => {
+  async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await dummyAPI.cancelFacultyBooking(bookingId, facultyId);
-      return { response, bookingId };
+      const response = await axios.put(
+        "http://localhost:5000/api/bookings/faculty/cancel",
+        bookingData
+      )
+      return response;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -509,16 +518,10 @@ const facultySlice = createSlice({
       // Approve Booking
       .addCase(approveBookingRequest.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(approveBookingRequest.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = action.payload.response.message;
-        // Remove from unapproved and add to approved
-        state.unapprovedBookings = state.unapprovedBookings.filter(
-          booking => booking.id !== action.payload.bookingId
-        );
-        state.error = null;
+        state.success = action.payload.message;
       })
       .addCase(approveBookingRequest.rejected, (state, action) => {
         state.loading = false;
@@ -527,16 +530,10 @@ const facultySlice = createSlice({
       // Reject Booking
       .addCase(rejectBookingRequest.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(rejectBookingRequest.fulfilled, (state, action) => {
         state.loading = false;
         state.success = action.payload.response.message;
-        // Remove from unapproved
-        state.unapprovedBookings = state.unapprovedBookings.filter(
-          booking => booking.id !== action.payload.bookingId
-        );
-        state.error = null;
       })
       .addCase(rejectBookingRequest.rejected, (state, action) => {
         state.loading = false;
@@ -545,19 +542,10 @@ const facultySlice = createSlice({
       // Cancel Booking
       .addCase(cancelFacultyBookingRequest.pending, (state) => {
         state.loading = true;
-        state.error = null;
       })
       .addCase(cancelFacultyBookingRequest.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = action.payload.response.message;
-        // Remove from confirmed and approved
-        state.confirmedBookings = state.confirmedBookings.filter(
-          booking => booking.id !== action.payload.bookingId
-        );
-        state.approvedBookings = state.approvedBookings.filter(
-          booking => booking.id !== action.payload.bookingId
-        );
-        state.error = null;
+        state.success = action.payload.message;
       })
       .addCase(cancelFacultyBookingRequest.rejected, (state, action) => {
         state.loading = false;

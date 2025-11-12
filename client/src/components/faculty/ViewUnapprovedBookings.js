@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchFacultyBookingsUnapproved, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } from '../../store/slices/facultySlice';
+import { fetchFacultyBookingsUnapproved, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter, cancelFacultyBookingRequest } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
 import { getFacultyByDepartment } from '../../store/slices/bookingSlice';
 import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
@@ -26,13 +26,21 @@ const ViewUnapprovedBookings = () => {
 
   const handleApproveBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to approve this booking request?')) {
-      dispatch(approveBookingRequest({ bookingId, facultyId: id }));
+      dispatch(approveBookingRequest({ id: bookingId, facultyId: id }));
     }
   };
 
-  const handleRejectBooking = async (bookingId) => {
+  const handleRejectBooking = async (bookingId, date, time, facultyIds, cancelFacultyId) => {
     if (window.confirm('Are you sure you want to reject this booking request? This will cancel the booking for all participants.')) {
-      dispatch(rejectBookingRequest({ bookingId, facultyId: id }));
+      dispatch(cancelFacultyBookingRequest(
+        {
+          id: bookingId,
+          date: date,
+          time: time,
+          facultyIds: facultyIds.map(faculty => faculty.facultyId),
+          cancelFacultyId: cancelFacultyId
+        }
+      ));
     }
   };
 
@@ -191,14 +199,14 @@ const ViewUnapprovedBookings = () => {
                   </small>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button
-                      onClick={() => handleRejectBooking(booking.id)}
+                      onClick={() => handleRejectBooking(booking._id, booking.date, booking.time, booking.facultyApprovals, id)}
                       className="btn btn-danger"
                       style={{ padding: '8px 16px', fontSize: '12px' }}
                     >
                       Reject
                     </button>
                     <button
-                      onClick={() => handleApproveBooking(booking.id)}
+                      onClick={() => handleApproveBooking(booking._id, id)}
                       className="btn btn-success"
                       style={{ padding: '8px 16px', fontSize: '12px' }}
                     >

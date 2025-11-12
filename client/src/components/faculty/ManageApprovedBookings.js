@@ -23,9 +23,17 @@ const ManageApprovedBookings = () => {
     }
   }, [success, dispatch]);
 
-  const handleCancelBooking = async (bookingId) => {
+  const handleCancelBooking = async (bookingId, date, time, facultyIds, cancelFacultyId) => {
     if (window.confirm('Are you sure you want to cancel this booking? This will notify all participants.')) {
-      dispatch(cancelFacultyBookingRequest({ bookingId, facultyId: id }));
+      dispatch(cancelFacultyBookingRequest(
+        {
+          id: bookingId,
+          date: date,
+          time: time,
+          facultyIds: facultyIds.map(faculty => faculty.facultyId),
+          cancelFacultyId: cancelFacultyId
+        }
+      ));
     }
   };
 
@@ -183,7 +191,7 @@ const ManageApprovedBookings = () => {
                     Requested: {new Date(booking.createdAt).toLocaleString()}
                   </small>
                   <button
-                    onClick={() => handleCancelBooking(booking.id)}
+                    onClick={() => handleCancelBooking(booking._id, booking.date, booking.time, booking.facultyApprovals, id)}
                     className="btn btn-danger"
                     style={{ padding: '8px 16px', fontSize: '12px' }}
                   >
