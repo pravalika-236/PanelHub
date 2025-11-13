@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { fetchConfirmedBookings, cancelFacultyBookingRequest, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
 import { getFacultyByDepartment } from '../../store/slices/bookingSlice';
-import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
+import { formatDateToDDMMYYYY, formateTableDate, getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ViewConfirmedBookings = () => {
   const dispatch = useDispatch();
@@ -12,7 +12,14 @@ const ViewConfirmedBookings = () => {
   const { faculties } = useSelector(state => state.booking);
 
   useEffect(() => {
-    dispatch(fetchConfirmedBookings(id));
+    dispatch(fetchConfirmedBookings(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
     dispatch(getFacultyByDepartment(department))
   }, [dispatch, id]);
 
@@ -22,6 +29,17 @@ const ViewConfirmedBookings = () => {
       dispatch(clearSuccess());
     }
   }, [success, dispatch]);
+
+  const handleApplyClick = () => {
+    dispatch(fetchConfirmedBookings(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
+  }
 
   const handleCancelBooking = async (bookingId, date, time, facultyIds, cancelFacultyId) => {
     if (window.confirm('Are you sure you want to cancel this confirmed booking? This will notify all participants.')) {
@@ -102,7 +120,7 @@ const ViewConfirmedBookings = () => {
               <option value="PHD">PHD</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => dispatch(fetchConfirmedBookings(id))}>Apply Filters</button>
+          <button className="btn btn-primary" onClick={() => handleApplyClick()}>Apply Filters</button>
         </div>
 
         {confirmedBookings.length === 0 ? (
@@ -128,8 +146,8 @@ const ViewConfirmedBookings = () => {
                       Presentation Booking
                     </h3>
                     <p style={{ margin: 0, color: '#666' }}>
-                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} |
-                      <strong> Time:</strong> {booking.time} |
+                      <strong>Date:</strong> {booking.date} |
+                      <strong> Time:</strong> {formateTableDate(booking.time)} |
                       <strong> Duration:</strong> 1 hour
                     </p>
                   </div>
@@ -172,7 +190,7 @@ const ViewConfirmedBookings = () => {
                       }}>
                         <div style={{ fontWeight: 'bold' }}>{getFacultyNameMapping(faculty.facultyId, faculties)}</div>
                         <div style={{ color: '#666' }}>{getFacultyEmailMapping(faculty.facultyId, faculties)}</div>
-                        {faculty.id === id && (
+                        {faculty.facultyId === id && (
                           <div style={{ color: '#0c5460', fontWeight: 'bold' }}>You</div>
                         )}
                       </div>

@@ -1,52 +1,31 @@
 import Booking from "../models/Booking.js";
 import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
 
-export const searchSlots = async (req, res) => {
+export const getScholarActiveBooking = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const activeBooking = await Booking.findOne({
-      scholarIds: userId,
-      status: { $in: ["pending", "booked"] },
-    });
-
-    const { faculties, date } = req.body;
-    const timeSlots = ["9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM"];
-    const availableSlots = timeSlots.map((time, idx) => ({
-      id: idx + 1,
-      time,
-      available: true,
-    }));
-
-    res.json({
-      slots: availableSlots,
-      hasActiveBooking: !!activeBooking,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-export const bookSlot = async (req, res) => {
-  try {
-    const { scholarId, facultyIds, date, time, department, courseCategory } = req.body;
-
+    const { scholarId } = req.params
     const existingBooking = await Booking.findOne({
-      scholarIds: scholarId,
+      scholarId: scholarId,
       status: { $in: ["pending", "booked"] },
     });
     if (existingBooking) {
-      return res.status(400).json({
-        message:
-          "You already have an active booking. Please manage your existing booking first.",
-      });
+      return res.status(200).json(true);
     }
+    return res.status(200).json(false);
+  } catch (err) {
+    console.error("getScholarActiveBooking:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
 
+export const bookSlot = async (req, res) => {
+  try {
+    const { scholarId, facultyIds, date, time, department, courseCategory, scholarName, scholarEmail } = req.body;
     if (!department) {
       return res
         .status(400)
         .json({ message: `Department '${department}' not found` });
     }
-
     const facultyApprovals = facultyIds.map((id) => {
       return {
         facultyId: id,
@@ -56,6 +35,8 @@ export const bookSlot = async (req, res) => {
 
     const booking = new Booking({
       scholarId: scholarId,
+      scholarName: scholarName,
+      scholarEmail: scholarEmail,
       facultyApprovals: facultyApprovals,
       status: "pending",
       date: date,
@@ -179,16 +160,26 @@ export const approveFacultyBooking = async (req, res) => {
 
 export const getFacultyBookingUnapproved = async (req, res) => {
   try {
-    const { facultyId } = req.params;
-    const bookings = await Booking.find({
+    const { id, date, time, courseCategory } = req.body;
+    const filter = {
       facultyApprovals: {
         $elemMatch: {
-          facultyId: facultyId,
+          facultyId: id,
           approveStatus: false,
         },
       },
       status: "pending",
-    });
+    };
+    if (date && date.trim() !== "") {
+      filter.date = date;
+    }
+    if (time && time.trim() !== "") {
+      filter.time = time;
+    }
+    if (courseCategory && courseCategory.trim() !== "") {
+      filter.courseCategory = courseCategory;
+    }
+    const bookings = await Booking.find(filter);
     res.json(bookings)
   } catch (err) {
     res.status(500).json({ message: err.message })
@@ -197,16 +188,26 @@ export const getFacultyBookingUnapproved = async (req, res) => {
 
 export const getFacultyBookingApprovedPending = async (req, res) => {
   try {
-    const { facultyId } = req.params;
-    const bookings = await Booking.find({
+    const { id, date, time, courseCategory } = req.body;
+    const filter = {
       facultyApprovals: {
         $elemMatch: {
-          facultyId: facultyId,
+          facultyId: id,
           approveStatus: true,
         },
       },
       status: "pending",
-    });
+    };
+    if (date && date.trim() !== "") {
+      filter.date = date;
+    }
+    if (time && time.trim() !== "") {
+      filter.time = time;
+    }
+    if (courseCategory && courseCategory.trim() !== "") {
+      filter.courseCategory = courseCategory;
+    }
+    const bookings = await Booking.find(filter);
     res.json(bookings)
   } catch (err) {
     res.status(500).json({ message: err.message })
@@ -215,11 +216,21 @@ export const getFacultyBookingApprovedPending = async (req, res) => {
 
 export const getFacultyBookingBooked = async (req, res) => {
   try {
-    const { facultyId } = req.params;
-    const bookings = await Booking.find({
-      "facultyApprovals.facultyId": facultyId,
+    const { id, date, time, courseCategory } = req.body;
+    const filter = {
+      "facultyApprovals.facultyId": id,
       status: "booked",
-    });
+    };
+    if (date && date.trim() !== "") {
+      filter.date = date;
+    }
+    if (time && time.trim() !== "") {
+      filter.time = time;
+    }
+    if (courseCategory && courseCategory.trim() !== "") {
+      filter.courseCategory = courseCategory;
+    }
+    const bookings = await Booking.find(filter);
     res.json(bookings)
   } catch (err) {
     res.status(500).json({ message: err.message })

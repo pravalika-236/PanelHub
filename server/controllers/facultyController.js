@@ -1,7 +1,6 @@
 import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
-import { createDefaultFacultyFreeSlots, formatDate, generateDaySlots } from "../utils/supportFunctions.js";
+import { createDefaultFacultyFreeSlots, generateDaySlots } from "../utils/supportFunctions.js";
 import User from "../models/User.js";
-import Booking from "../models/Booking.js";
 
 
 // Create a new faculty slot document with default free slots
@@ -32,7 +31,7 @@ export async function persistCalender(facultyId) {
 
     await newRecord.save();
   } catch (err) {
-    console.error("persistCalender error:", err);
+    console.error("persistCalender:", err);
   }
 }
 
@@ -82,7 +81,6 @@ export async function getAllFaculties(req, res) {
       return res.status(400).json({ message: "Department is required" });
     }
 
-    // ✅ Fetch from User collection — only users with role: "Faculty"
     const faculties = await User.find({
       department,
       role: "Faculty",
@@ -95,63 +93,15 @@ export async function getAllFaculties(req, res) {
   }
 }
 
-
-// These retain upstream placeholders — replace later when logic is merged
-export async function getConfirmedBookings(req, res) {
-  try {
-    // 🔸 Upstream logic placeholder
-  } catch (error) {
-    console.error("getConfirmedBookings:", error);
-    res.status(500).json({ message: "Error fetching confirmed bookings" });
-  }
-}
-
-export async function getUnapproveBooking(req, res) {
-  try {
-    const { facultyId, date, time, courseCategory } = req.body;
-    const bookings = await Booking.find({
-      date: date,
-      time: time,
-      courseCategory: courseCategory,
-      "faculties.id": facultyId
-    });
-    res.json(bookings);
-  } catch (error) {
-    console.error("unapproveBooking:", error);
-    res.status(500).json({ message: "Error getting unapproved booking" });
-  }
-}
-
-export async function approveBooking(req, res) {
-  try {
-    const { bookingId, facultyId } = req.body;
-    await Booking.updateOne(
-      {
-        _id: bookingId,
-        "faculties.id": facultyId
-      },
-      {
-        $set: { "faculties.$.approved": true }
-      }
-    );
-
-    res.status(200).json({ message: "Approved" })
-  } catch (error) {
-    console.error("unapproveBooking:", error);
-    res.status(500).json({ message: "Error getting unapproved booking" });
-  }
-}
-
 function findCommonSlots(facultyList, date, courseCategory) {
 
   const firstFaculty = facultyList[0];
   const baseSlots = firstFaculty.freeSlot[date];
 
-
   const commonSlots = Object.keys(baseSlots).filter((time) =>
     facultyList.every(
       (faculty) => {
-        return faculty.freeSlot[date][time]?.[courseCategory] === true
+        return faculty.freeSlot[date][time]?.[courseCategory] === true && faculty.freeSlot[date][time]?.bookStatus !== true
       }
     )
   );
@@ -178,7 +128,7 @@ export async function getCommonSlots(req, res) {
       facultyIds: facultyIds
     });
   } catch (error) {
-    console.error("Error in getCommonSlots (v3.3):", error);
+    console.error("getCommonSlots:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -209,7 +159,6 @@ export async function cleanupFacultySlotScheduler(facultyId) {
   const record = await FacultyFreeSlot.findOne({ facultyId });
 
   const today = new Date();
-  const formattedToday = formatDate(today);
 
   // Filter out past dates
   const updatedFreeSlot = {};

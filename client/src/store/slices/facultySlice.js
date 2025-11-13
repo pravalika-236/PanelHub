@@ -381,10 +381,11 @@ export const cancelFacultyBookingRequest = createAsyncThunk(
 
 export const fetchFacultyBookingsUnapproved = createAsyncThunk(
   'faculty/fetchFacultyBookingsUnapproved',
-  async (id, { rejectWithValue }) => {
+  async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/bookings/faculty/${id}`
+      const response = await axios.post(
+        `http://localhost:5000/api/bookings/faculty`,
+        bookingData
       )
       return response;
     } catch (error) {
@@ -395,10 +396,11 @@ export const fetchFacultyBookingsUnapproved = createAsyncThunk(
 
 export const fetchConfirmedBookings = createAsyncThunk(
   'faculty/fetchConfirmedBookings',
-  async (facultyId, { rejectWithValue }) => {
+  async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/bookings/faculty/confirmed/${facultyId}`
+      const response = await axios.post(
+        `http://localhost:5000/api/bookings/faculty/confirmed`,
+        bookingData
       )
       return response;
     } catch (error) {
@@ -409,10 +411,11 @@ export const fetchConfirmedBookings = createAsyncThunk(
 
 export const fetchFacultyApprovedBookings = createAsyncThunk(
   'faculty/fetchApprovedBookings',
-  async (facultyId, { rejectWithValue }) => {
+  async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/bookings/faculty/approved/${facultyId}`
+      const response = await axios.post(
+        `http://localhost:5000/api/bookings/faculty/approved`,
+        bookingData
       )
       return response;
     } catch (error) {

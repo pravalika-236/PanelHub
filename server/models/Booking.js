@@ -3,7 +3,8 @@ import { Schema, model } from "mongoose";
 const bookingSchema = new Schema(
   {
     scholarId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-
+    scholarName: { type: String, required: true },
+    scholarEmail: { type: String, required: true },
     facultyApprovals: [
       {
         facultyId: { type: Schema.Types.ObjectId, ref: "User" },
@@ -18,8 +19,8 @@ const bookingSchema = new Schema(
     },
 
     date: { type: String, required: true },
-    time: { type: String, required: true }, // e.g. "10:00"
-    duration: { type: Number, default: 1 }, // always 1 hour
+    time: { type: String, required: true },
+    duration: { type: Number, default: 1 },
 
     department: { type: String, required: true },
     courseCategory: { type: String, required: true },

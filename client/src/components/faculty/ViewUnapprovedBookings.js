@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { fetchFacultyBookingsUnapproved, approveBookingRequest, rejectBookingRequest, clearError, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter, cancelFacultyBookingRequest } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
 import { getFacultyByDepartment } from '../../store/slices/bookingSlice';
-import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
+import { formatDateToDDMMYYYY, formateTableDate, getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ViewUnapprovedBookings = () => {
   const dispatch = useDispatch();
@@ -13,7 +13,14 @@ const ViewUnapprovedBookings = () => {
   const { faculties } = useSelector(state => state.booking)
 
   useEffect(() => {
-    dispatch(fetchFacultyBookingsUnapproved(id));
+    dispatch(fetchFacultyBookingsUnapproved(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
     dispatch(getFacultyByDepartment(department))
   }, [dispatch, id]);
 
@@ -23,6 +30,17 @@ const ViewUnapprovedBookings = () => {
       dispatch(clearSuccess());
     }
   }, [success, dispatch]);
+
+  const handleApplyClick = () => {
+    dispatch(fetchFacultyBookingsUnapproved(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
+  }
 
   const handleApproveBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to approve this booking request?')) {
@@ -109,7 +127,7 @@ const ViewUnapprovedBookings = () => {
               <option value="PHD">PHD</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => dispatch(fetchFacultyBookingsUnapproved(id))}>Apply Filters</button>
+          <button className="btn btn-primary" onClick={() => handleApplyClick()}>Apply Filters</button>
         </div>
 
         {unapprovedBookings.length === 0 ? (
@@ -135,8 +153,8 @@ const ViewUnapprovedBookings = () => {
                       Presentation Booking Request
                     </h3>
                     <p style={{ margin: 0, color: '#666' }}>
-                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} |
-                      <strong> Time:</strong> {booking.time} |
+                      <strong>Date:</strong> {booking.date} |
+                      <strong> Time:</strong> {formateTableDate(booking.time)} |
                       <strong> Duration:</strong> 1 hour
                     </p>
                   </div>
