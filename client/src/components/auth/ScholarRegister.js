@@ -7,7 +7,7 @@ const ScholarRegister = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { loading, error, success } = useSelector(state => state.auth);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -20,7 +20,7 @@ const ScholarRegister = () => {
   useEffect(() => {
     if (success) {
       alert("Account creation success, Please login")
-        navigate('/login');
+      navigate('/login');
     }
   }, [success, navigate]);
 
@@ -51,14 +51,22 @@ const ScholarRegister = () => {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-evenly',
       backgroundColor: '#2c3e50',
-      padding: '20px 0'
+      padding: '20px 0',
+      flexDirection: "row"
     }}>
+      <img
+        src="/logo.png"
+        alt="Logo"
+        width={350}
+        height={250}
+        className='bounce'
+      />
       <div className="card" style={{ width: '500px', maxWidth: '90vw' }}>
         <div className="card-header">
           <h2 className="card-title" style={{ textAlign: 'center', marginBottom: '10px' }}>
@@ -165,8 +173,8 @@ const ScholarRegister = () => {
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="btn btn-primary"
             style={{ width: '100%', marginBottom: '20px' }}
             disabled={loading}

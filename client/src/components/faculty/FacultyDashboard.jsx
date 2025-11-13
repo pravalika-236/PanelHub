@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from '../common/Header.jsx';
 import Footer from '../common/Footer.jsx';
 import Sidebar from '../common/Sidebar.jsx';
@@ -6,9 +6,16 @@ import ManageFreeSlots from './ManageFreeSlots.jsx';
 import ManageApprovedBookings from './ManageApprovedBookings.js';
 import ViewConfirmedBookings from './ViewConfirmedBookings.js';
 import ViewUnapprovedBookings from './ViewUnapprovedBookings.js';
+import { useNavigate } from 'react-router-dom';
 
-const FacultyDashboard = () => {
-  const [activeSection, setActiveSection] = useState('manage-slots');
+const FacultyDashboard = (props) => {
+  const [activeSection, setActiveSection] = useState(props.page);
+
+  useEffect(() => {
+    setActiveSection(props.page)
+  }, [props.page])
+
+  const navigate = useNavigate();
 
   const renderContent = () => {
     switch (activeSection) {
@@ -32,7 +39,7 @@ const FacultyDashboard = () => {
       <div style={{ display: 'flex', flex: 1, marginTop: '80px', marginBottom: '80px' }}>
         <Sidebar 
           activeSection={activeSection} 
-          onSectionChange={setActiveSection} 
+          onSectionChange={navigate} 
         />
         
         <main style={{ 

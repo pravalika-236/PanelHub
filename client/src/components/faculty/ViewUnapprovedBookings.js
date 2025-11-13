@@ -42,9 +42,20 @@ const ViewUnapprovedBookings = () => {
     ));
   }
 
+  const handleReload = () => {
+    dispatch(fetchFacultyBookingsUnapproved(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
+  }
+
   const handleApproveBooking = async (bookingId) => {
     if (window.confirm('Are you sure you want to approve this booking request?')) {
-      dispatch(approveBookingRequest({ id: bookingId, facultyId: id }));
+      dispatch(approveBookingRequest({ id: bookingId, facultyId: id })).then(() => handleReload())
     }
   };
 
@@ -58,7 +69,7 @@ const ViewUnapprovedBookings = () => {
           facultyIds: facultyIds.map(faculty => faculty.facultyId),
           cancelFacultyId: cancelFacultyId
         }
-      ));
+      )).then(() => handleReload())
     }
   };
 

@@ -4,15 +4,15 @@ import { useSelector } from 'react-redux';
 const Sidebar = ({ activeSection, onSectionChange }) => {
   const { userName, role } = useSelector(state => state.auth);
   const scholarMenuItems = [
-    { id: 'book-slot', label: 'Book Slot', icon: '📅' },
-    { id: 'manage-booking', label: 'Manage Booking', icon: '📋' }
+    { id: 'book-slot', label: 'Book Slot', icon: '📅', navigation: "/scholar/bookslot" },
+    { id: 'manage-booking', label: 'Manage Booking', icon: '📋', navigation: "/scholar/managebooking" }
   ];
 
   const facultyMenuItems = [
-    { id: 'manage-slots', label: 'Manage Free Slots', icon: '⏰' },
-    { id: 'confirmed-bookings', label: 'View Confirmed Booking', icon: '✅' },
-    { id: 'approved-bookings', label: 'Manage Approved Booking', icon: '📝' },
-    { id: 'unapproved-bookings', label: 'View Unapproved Booking', icon: '⏳' }
+    { id: 'manage-slots', label: 'Manage Free Slots', icon: '⏰', navigation: "/faculty/freeslots" },
+    { id: 'confirmed-bookings', label: 'View Confirmed Booking', icon: '✅', navigation: "/faculty/confirmed" },
+    { id: 'approved-bookings', label: 'Manage Approved Booking', icon: '📝', navigation: "/faculty/approved" },
+    { id: 'unapproved-bookings', label: 'View Unapproved Booking', icon: '⏳', navigation: "/faculty/unapproved" }
   ];
 
   const menuItems = role === 'Scholar' ? scholarMenuItems : facultyMenuItems;
@@ -33,7 +33,7 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
           {menuItems.map(item => (
             <li key={item.id} style={{ marginBottom: '5px' }}>
               <button
-                onClick={() => onSectionChange(item.id)}
+                onClick={() => onSectionChange(item.navigation)}
                 style={{
                   width: '100%',
                   padding: '15px 20px',

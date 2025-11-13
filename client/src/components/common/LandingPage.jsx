@@ -22,8 +22,8 @@ const LandingPage = () => {
             <img
                 src="logo.png"
                 alt="Logo"
-                width={250}
-                height={250}
+                width={525}
+                height={375}
                 className="bounce"
             />
             <button className="card" style={{ width: '400px', maxWidth: '90vw', marginTop: "10vh" }} onClick={handleGetStarted}>
@@ -31,7 +31,7 @@ const LandingPage = () => {
             </button>
             <p style={{
                 color: "yellow"
-            }}>Centralized platform to book your panel members!</p>
+            }}>PanelHub — where scholars and faculty meet effortlessly. Simplify scheduling, eliminate conflicts, and save time.</p>
         </div>
     )
 }

@@ -10,9 +10,11 @@ import {
 import Loader from "../common/Loader";
 import Select from "react-select";
 import { formatDateToDDMMYYYY, formateTableDate } from "../utils/helperFunctions";
+import { useNavigate } from "react-router-dom";
 
 const BookSlot = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const auth = useSelector((state) => state.auth);
   const booking = useSelector((state) => state.booking)
@@ -29,6 +31,13 @@ const BookSlot = () => {
     }
   }, [dispatch, id]);
 
+  const handleReload = () => {
+    if (id) {
+      dispatch(getFacultyByDepartment(department));
+      dispatch(getScholarActiveBooking(id));
+      setSelectedFaculties([])
+    }
+  }
 
   const handleFacultySelect = (selectedOptions) => {
     if (selectedOptions.length <= 3) {
@@ -57,7 +66,7 @@ const BookSlot = () => {
       department: department,
       courseCategory: courseCategory
     }
-    dispatch(bookPresentationSlot(bookingData))
+    dispatch(bookPresentationSlot(bookingData)).then(() => alert("Booking confirmed, view on Manage Booking")).then(() => handleReload())
   }
 
 
