@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import {
   bookPresentationSlot,
   getFacultyByDepartment,
+  getScholarActiveBooking,
   searchAvailableSlots,
   setFilterDateBooking,
 } from "../../store/slices/bookingSlice";
@@ -16,7 +17,7 @@ const BookSlot = () => {
   const auth = useSelector((state) => state.auth);
   const booking = useSelector((state) => state.booking)
 
-  const { id, department, courseCategory } = auth;
+  const { id, department, courseCategory, userName, email } = auth;
   const { availableSlots, hasActiveBooking, loading, error, success, filterDateBooking, faculties, availableSlotDetails } = booking;
 
   const [selectedFaculties, setSelectedFaculties] = useState([]);
@@ -24,6 +25,7 @@ const BookSlot = () => {
   useEffect(() => {
     if (id) {
       dispatch(getFacultyByDepartment(department));
+      dispatch(getScholarActiveBooking(id));
     }
   }, [dispatch, id]);
 
@@ -47,6 +49,8 @@ const BookSlot = () => {
   const handleBookSlot = (slot) => {
     const bookingData = {
       scholarId: id,
+      scholarName: userName,
+      scholarEmail: email,
       facultyIds: availableSlotDetails.facultyIds,
       date: formatDateToDDMMYYYY(filterDateBooking),
       time: slot,
@@ -126,9 +130,9 @@ const BookSlot = () => {
         <button
           onClick={() => handleSearchSlots()}
           className="btn btn-primary"
-          disabled={loading || hasActiveBooking}
+          disabled={hasActiveBooking || selectedFaculties.length === 0 || selectedFaculties.length === 3}
         >
-          {loading ? "Searching..." : "Search Available Slots"}
+          {"Search Available Slots"}
         </button>
       </div>
 

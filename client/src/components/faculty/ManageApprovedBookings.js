@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { cancelFacultyBookingRequest, clearSuccess, setDateFilter, setTimeFilter, setCourseFilter, fetchFacultyApprovedBookings } from '../../store/slices/facultySlice';
 import Loader from '../common/Loader';
 import { getFacultyByDepartment } from '../../store/slices/bookingSlice';
-import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
+import { formatDateToDDMMYYYY, formateTableDate, getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ManageApprovedBookings = () => {
   const dispatch = useDispatch();
@@ -12,7 +12,14 @@ const ManageApprovedBookings = () => {
   const { faculties } = useSelector(state => state.booking)
 
   useEffect(() => {
-    dispatch(fetchFacultyApprovedBookings(id));
+    dispatch(fetchFacultyApprovedBookings(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
     dispatch(getFacultyByDepartment(department))
   }, [dispatch, id]);
 
@@ -22,6 +29,17 @@ const ManageApprovedBookings = () => {
       dispatch(clearSuccess());
     }
   }, [success, dispatch]);
+
+  const handleApplyClick = () => {
+    dispatch(fetchFacultyApprovedBookings(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
+  }
 
   const handleCancelBooking = async (bookingId, date, time, facultyIds, cancelFacultyId) => {
     if (window.confirm('Are you sure you want to cancel this booking? This will notify all participants.')) {
@@ -102,7 +120,7 @@ const ManageApprovedBookings = () => {
               <option value="PHD">PHD</option>
             </select>
           </div>
-          <button className="btn btn-primary" onClick={() => dispatch(fetchFacultyApprovedBookings(id))}>Apply Filters</button>
+          <button className="btn btn-primary" onClick={() => handleApplyClick()}>Apply Filters</button>
         </div>
 
         {approvedBookings.length === 0 ? (
@@ -128,8 +146,8 @@ const ManageApprovedBookings = () => {
                       Presentation Booking
                     </h3>
                     <p style={{ margin: 0, color: '#666' }}>
-                      <strong>Date:</strong> {new Date(booking.date).toLocaleDateString()} |
-                      <strong> Time:</strong> {booking.time} |
+                      <strong>Date:</strong> {booking.date} |
+                      <strong> Time:</strong> {formateTableDate(booking.time)} |
                       <strong> Duration:</strong> 1 hour
                     </p>
                   </div>

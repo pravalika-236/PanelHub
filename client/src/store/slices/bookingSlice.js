@@ -75,6 +75,20 @@ export const getFacultyByDepartment = createAsyncThunk(
   }
 )
 
+export const getScholarActiveBooking = createAsyncThunk(
+  'booking/fetchScholarActiveBookings',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/scholar/active/${id}`
+      )
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const bookingSlice = createSlice({
   name: 'booking',
   initialState: {
@@ -172,6 +186,18 @@ const bookingSlice = createSlice({
       .addCase(getFacultyByDepartment.fulfilled, (state, action) => {
         state.loading = false;
         state.faculties = action.payload.data;
+      })
+
+      .addCase(getScholarActiveBooking.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(getScholarActiveBooking.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(getScholarActiveBooking.fulfilled, (state, action) => {
+        state.loading = false;
+        state.hasActiveBooking = action.payload.data;
       })
   }
 });
