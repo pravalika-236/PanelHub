@@ -1,119 +1,238 @@
 import Booking from "../models/Booking.js";
+import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
 
-/* -------------------------------------------------------------------------- */
-/*                               SEARCH SLOTS                                 */
-/* -------------------------------------------------------------------------- */
-export const searchSlots = async (req, res) => {
+export const getScholarActiveBooking = async (req, res) => {
   try {
-    const { faculties, date } = req.body;
-    const timeSlots = ["9:00 AM", "10:00 AM", "11:00 AM", "2:00 PM", "3:00 PM"];
-    const availableSlots = timeSlots.map((time, idx) => ({
-      id: idx + 1,
-      time,
-      available: true,
-    }));
-
-    res.json({ slots: availableSlots, hasActiveBooking: false });
+    const { scholarId } = req.params
+    const existingBooking = await Booking.findOne({
+      scholarId: scholarId,
+      status: { $in: ["pending", "booked"] },
+    });
+    if (existingBooking) {
+      return res.status(200).json(true);
+    }
+    return res.status(200).json(false);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("getScholarActiveBooking:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
-};
+}
 
-/* -------------------------------------------------------------------------- */
-/*                               BOOK SLOT                                    */
-/* -------------------------------------------------------------------------- */
 export const bookSlot = async (req, res) => {
   try {
-    // ✅ Extract relevant fields
-    const {
-      scholarIds,
-      facultyIds,
-      date,
-      startTime,
-      duration,
-      department,
-      courseCategory,
-      createdBy,
-    } = req.body;
-
-    // ✅ Basic validation
-    if (!scholarIds || !facultyIds || !date || !startTime) {
+    const { scholarId, facultyIds, date, time, department, courseCategory, scholarName, scholarEmail } = req.body;
+    if (!department) {
       return res
         .status(400)
-        .json({ message: "Missing required fields for booking" });
+        .json({ message: `Department '${department}' not found` });
     }
+    const facultyApprovals = facultyIds.map((id) => {
+      return {
+        facultyId: id,
+        approveStatus: false
+      }
+    })
 
-    // ✅ Initialize faculty approvals dynamically
-    const facultyApprovals = {};
-    facultyIds.forEach((fid) => {
-      facultyApprovals[fid] = false;
-    });
-
-    // ✅ Construct booking doc according to your schema
-    const newBooking = new Booking({
-      scholarIds,
-      facultyIds,
-      facultyApprovals,
+    const booking = new Booking({
+      scholarId: scholarId,
+      scholarName: scholarName,
+      scholarEmail: scholarEmail,
+      facultyApprovals: facultyApprovals,
       status: "pending",
-      date,
-      startTime,
-      duration: duration || 1,
-      department,
-      courseCategory,
-      createdBy,
+      date: date,
+      time: time,
+      duration: 1,
+      department: department,
+      courseCategory: courseCategory,
+      createdBy: scholarId,
       createdAt: new Date(),
-      updatedBy: createdBy,
+      updatedBy: scholarId,
       updatedAt: new Date(),
     });
 
-    await newBooking.save();
+    const saved = await booking.save();
 
-    return res.status(201).json({
-      success: true,
-      message: "Slot booked successfully!",
-      booking: newBooking,
-    });
-// inside bookSlot controller catch block
-} catch (err) {
-  console.error("❌ Booking save error:", err);
+    const facultiesFreeSlots = await FacultyFreeSlot.find(
+      { facultyId: { $in: facultyIds } }
+    )
+    facultiesFreeSlots.forEach(async (facultyFreeSlot) => {
+      const facultyId = facultyFreeSlot.facultyId;
+      await FacultyFreeSlot.updateOne(
+        { facultyId },
+        {
+          $set: {
+            [`freeSlot.${date}.${time}.bookStatus`]: true
+          }
+        }
+      );
+    })
 
-  // If Mongoose validation error, include details
-  if (err.name === "ValidationError") {
-    const errors = {};
-    for (const key in err.errors) {
-      errors[key] = err.errors[key].message;
-    }
-    return res.status(400).json({
-      message: "Failed to book slot",
-      error: err.message,
-      validationErrors: errors,
-    });
+    res
+      .status(201)
+      .json({ message: "Booking created successfully", booking: saved });
+  } catch (err) {
+    console.error("Booking creation failed:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
-
-  res.status(500).json({ message: err.message });
-}
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             USER BOOKINGS                                  */
-/* -------------------------------------------------------------------------- */
-export const getUserBookings = async (req, res) => {
+
+export const getScholarBooking = async (req, res) => {
   try {
-    const bookings = await Booking.find({ userId: req.params.userId });
+    const bookings = await Booking.find({ scholarId: req.params.scholarId });
     res.json(bookings);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                              CANCEL BOOKING                                */
-/* -------------------------------------------------------------------------- */
-export const cancelBooking = async (req, res) => {
+
+export const cancelScholarBooking = async (req, res) => {
   try {
-    await Booking.findByIdAndDelete(req.params.bookingId);
+    const { id, date, time, facultyIds } = req.body;
+
+    facultyIds.forEach(async (facultyId) => {
+      await FacultyFreeSlot.updateOne(
+        { facultyId },
+        { $set: { [`freeSlot.${date}.${time}.bookStatus`]: false } }
+      );
+    })
+    await Booking.findByIdAndDelete(id);
     res.json({ success: true, message: "Booking cancelled successfully!" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
+export const cancelFacultyBooking = async (req, res) => {
+  try {
+    const { id, date, time, facultyIds, cancelFacultyId } = req.body;
+    facultyIds.forEach(async (facultyId) => {
+      if (cancelFacultyId !== facultyId) {
+        await FacultyFreeSlot.updateOne(
+          { facultyId },
+          { $set: { [`freeSlot.${date}.${time}.bookStatus`]: false } }
+        );
+      } else {
+        await FacultyFreeSlot.updateOne(
+          { facultyId },
+          {
+            $set: {
+              [`freeSlot.${date}.${time}.UG`]: false,
+              [`freeSlot.${date}.${time}.PG`]: false,
+              [`freeSlot.${date}.${time}.PHD`]: false,
+              [`freeSlot.${date}.${time}.bookStatus`]: false
+            }
+          }
+        );
+      }
+    })
+    await Booking.findByIdAndDelete(id);
+    res.json({ success: true, message: "Booking cancelled successfully!" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const approveFacultyBooking = async (req, res) => {
+  try {
+    const { id, facultyId } = req.body;
+    const booking = await Booking.findOneAndUpdate(
+      { _id: id, "facultyApprovals.facultyId": facultyId },
+      { $set: { "facultyApprovals.$.approveStatus": true } },
+      { new: true }
+    );
+
+    const allApproved = booking.facultyApprovals.every(
+      (f) => f.approveStatus === true
+    );
+
+    if (allApproved) {
+      booking.status = "booked";
+      await booking.save();
+    }
+
+    res.json({ success: true, message: "Approved successfully!" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getFacultyBookingUnapproved = async (req, res) => {
+  try {
+    const { id, date, time, courseCategory } = req.body;
+    const filter = {
+      facultyApprovals: {
+        $elemMatch: {
+          facultyId: id,
+          approveStatus: false,
+        },
+      },
+      status: "pending",
+    };
+    if (date && date.trim() !== "") {
+      filter.date = date;
+    }
+    if (time && time.trim() !== "") {
+      filter.time = time;
+    }
+    if (courseCategory && courseCategory.trim() !== "") {
+      filter.courseCategory = courseCategory;
+    }
+    const bookings = await Booking.find(filter);
+    res.json(bookings)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+export const getFacultyBookingApprovedPending = async (req, res) => {
+  try {
+    const { id, date, time, courseCategory } = req.body;
+    const filter = {
+      facultyApprovals: {
+        $elemMatch: {
+          facultyId: id,
+          approveStatus: true,
+        },
+      },
+      status: "pending",
+    };
+    if (date && date.trim() !== "") {
+      filter.date = date;
+    }
+    if (time && time.trim() !== "") {
+      filter.time = time;
+    }
+    if (courseCategory && courseCategory.trim() !== "") {
+      filter.courseCategory = courseCategory;
+    }
+    const bookings = await Booking.find(filter);
+    res.json(bookings)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
+export const getFacultyBookingBooked = async (req, res) => {
+  try {
+    const { id, date, time, courseCategory } = req.body;
+    const filter = {
+      "facultyApprovals.facultyId": id,
+      status: "booked",
+    };
+    if (date && date.trim() !== "") {
+      filter.date = date;
+    }
+    if (time && time.trim() !== "") {
+      filter.time = time;
+    }
+    if (courseCategory && courseCategory.trim() !== "") {
+      filter.courseCategory = courseCategory;
+    }
+    const bookings = await Booking.find(filter);
+    res.json(bookings)
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+}

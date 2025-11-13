@@ -1,0 +1,13 @@
+
+@keyframes upDown {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.bounce {
+  animation: upDown 2s ease-in-out infinite;
+}

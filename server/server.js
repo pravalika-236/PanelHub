@@ -8,9 +8,6 @@ import userRouter from "./routes/userRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import facultyRoutes from "./routes/facultyRoutes.js";
 
-// ✅ ES import for notification routes
-import notificationRoutes from "./notification/notificationRoutes.js";
-
 config();
 const app = express();
 
@@ -25,7 +22,6 @@ app.use(cors());
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/users", userRouter);
 app.use("/api/bookings", bookingRoutes);
-app.use("/api/notification", notificationRoutes);  // ✅ added
 
 app.get("/", (req, res) => 
   res.send("✅ PanelHub Server is running successfully.")
