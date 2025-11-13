@@ -7,7 +7,7 @@ const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { loading, error, user, isAuthenticated } = useSelector(state => state.auth);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -15,7 +15,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate(user.role === 'scholar' ? '/scholar' : '/faculty');
+      navigate(user.role === 'scholar' ? '/scholar/bookslot' : '/faculty/freeslots');
     }
   }, [isAuthenticated, user, navigate]);
 
@@ -32,13 +32,20 @@ const Login = () => {
   };
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      backgroundColor: '#2c3e50'
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-evenly',
+      backgroundColor: '#2c3e50',
     }}>
+      <img
+        src="logo.png"
+        alt="Logo"
+        width={350}
+        height={250}
+        className='bounce'
+      />
       <div className="card" style={{ width: '400px', maxWidth: '90vw' }}>
         <div className="card-header">
           <h2 className="card-title" style={{ textAlign: 'center', marginBottom: '10px' }}>
@@ -80,8 +87,8 @@ const Login = () => {
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="btn btn-primary"
             style={{ width: '100%', marginBottom: '20px' }}
             disabled={loading}

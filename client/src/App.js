@@ -19,24 +19,56 @@ const AppRoutes = () => {
       {loading && <Loader message='Please Wait' />}
       <div className="App">
         <Routes>
+
           <Route path="/" element={<LandingPage />} />
+
           <Route path="/login" element={
-            isAuthenticated ? <Navigate to={role === 'Scholar' ? '/scholar' : '/faculty'} /> :
+            isAuthenticated ? <Navigate to={role === 'Scholar' ? '/scholar/bookslot' : '/faculty/freeslots'} /> :
               <Login />
           } />
+
           <Route path="/register/scholar" element={<ScholarRegister />} />
+
           <Route path="/register/faculty" element={<FacultyRegister />} />
-          <Route path="/scholar" element={
+
+          <Route path="/scholar/bookslot" element={
             isAuthenticated && role === 'Scholar' ?
-              <ScholarDashboard /> :
+              <ScholarDashboard page="book-slot" /> :
               <Navigate to="/login" />
           } />
-          <Route path="/faculty" element={
+
+          <Route path="/scholar/managebooking" element={
+            isAuthenticated && role === 'Scholar' ?
+              <ScholarDashboard page="manage-booking" /> :
+              <Navigate to="/login" />
+          } />
+
+          <Route path="/faculty/freeslots" element={
             isAuthenticated && role === 'Faculty' ?
-              <FacultyDashboard /> :
+              <FacultyDashboard page="manage-slots" /> :
               <Navigate to="/login" />
           } />
+
+          <Route path="/faculty/unapproved" element={
+            isAuthenticated && role === 'Faculty' ?
+              <FacultyDashboard page="unapproved-bookings" /> :
+              <Navigate to="/login" />
+          } />
+
+          <Route path="/faculty/approved" element={
+            isAuthenticated && role === 'Faculty' ?
+              <FacultyDashboard page="approved-bookings" /> :
+              <Navigate to="/login" />
+          } />
+
+          <Route path="/faculty/confirmed" element={
+            isAuthenticated && role === 'Faculty' ?
+              <FacultyDashboard page="confirmed-bookings" /> :
+              <Navigate to="/login" />
+          } />
+
           <Route path="/" element={<Navigate to="/login" />} />
+
         </Routes>
       </div>
     </Router>

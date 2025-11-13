@@ -41,6 +41,17 @@ const ViewConfirmedBookings = () => {
     ));
   }
 
+  const handleReload = () => {
+    dispatch(fetchConfirmedBookings(
+      {
+        id: id,
+        date: formatDateToDDMMYYYY(filterDate),
+        time: filterTime,
+        courseCategory: filterCourse
+      }
+    ));
+  }
+
   const handleCancelBooking = async (bookingId, date, time, facultyIds, cancelFacultyId) => {
     if (window.confirm('Are you sure you want to cancel this confirmed booking? This will notify all participants.')) {
       dispatch(cancelFacultyBookingRequest(
@@ -51,7 +62,7 @@ const ViewConfirmedBookings = () => {
           facultyIds: facultyIds.map(faculty => faculty.facultyId),
           cancelFacultyId: cancelFacultyId
         }
-      ));
+      )).then(() => handleReload())
     }
   };
 

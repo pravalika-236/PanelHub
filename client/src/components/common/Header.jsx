@@ -26,14 +26,20 @@ const Header = () => {
       zIndex: 1000
     }}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>PanelHub</h1>
+        <img
+          src="/logoIcon.png"
+          alt="Logo"
+          width={50}
+          height={50}
+        />
+        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold', color: "#fdbb35" }}>PanelHub</h1>
       </div>
       {userName && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ fontSize: '16px' }}>
             Welcome, {userName} ({role === 'Scholar' ? 'Scholar' : 'Faculty'})
           </span>
-          <button 
+          <button
             onClick={handleLogout}
             className="btn btn-secondary"
             style={{ padding: '8px 16px', fontSize: '14px' }}

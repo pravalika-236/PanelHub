@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchScholarBookings, cancelScholarBooking, clearSuccess } from '../../store/slices/bookingSlice';
 import Loader from '../common/Loader';
-import { getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
+import { formateTableDate, getFacultyEmailMapping, getFacultyNameMapping } from '../utils/helperFunctions';
 
 const ManageBooking = () => {
   const dispatch = useDispatch();
@@ -22,6 +22,12 @@ const ManageBooking = () => {
     }
   }, [success, dispatch]);
 
+  const handleReload = () => {
+    if (id) {
+      dispatch(fetchScholarBookings(id));
+    }
+  }
+
   const handleCancelBooking = async (bookingId, date, time, facultyIds) => {
     if (window.confirm('Are you sure you want to cancel this booking?')) {
       dispatch(cancelScholarBooking(
@@ -31,7 +37,7 @@ const ManageBooking = () => {
           time: time,
           facultyIds: facultyIds.map(faculty => faculty.facultyId)
         }
-      ));
+      )).then(() => handleReload())
     }
   };
 
@@ -77,8 +83,8 @@ const ManageBooking = () => {
                     Presentation Slot
                   </h3>
                   <p style={{ margin: 0, color: '#666' }}>
-                    <strong>Date:</strong> {new Date(scholarBookings[0].date).toLocaleDateString()} |
-                    <strong> Time:</strong> {scholarBookings[0].time}
+                    <strong>Date:</strong> {scholarBookings[0].date} |
+                    <strong> Time:</strong> {formateTableDate(scholarBookings[0].time)}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
