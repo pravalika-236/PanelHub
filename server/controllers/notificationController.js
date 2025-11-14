@@ -82,106 +82,7 @@ export const createNotification = async (req, res) => {
   try {
     const { recipient, event, slotId } = req.body;
 
-    if (!recipient || !event) {
-      return res
-        .status(400)
-        .json({ message: "recipient and event are required" });
-    }
-
-    // Save notification document
-    const notif = new Notification({
-      recipient,
-      event,
-      slotId: slotId || null,
-    });
-
-    const saved = await notif.save();
-
-    // Lookup emails for scholars & faculties
-    const scholarIds = (recipient.scholarIds || []).filter(Boolean);
-    const facultyIds = (recipient.facultyIds || []).filter(Boolean);
-
-    const userIds = [...scholarIds, ...facultyIds];
-
-    let users = [];
-    if (userIds.length > 0) {
-      users = await User.find({ _id: { $in: userIds } }).select("email name");
-    }
-
-    const emails = users.map((u) => u.email).filter(Boolean);
-
-    // Optional: If slotId provided, we can lookup booking to include details in message
-    let booking = null;
-    if (slotId) {
-      try {
-        booking = await Booking.findById(slotId).lean();
-      } catch (err) {
-        // ignore silently, booking may not exist yet
-      }
-    }
-
-    // Prepare a simple template depending on event
-    let subject = `Notification: ${event}`;
-    let text = `Event: ${event}`;
-    let html = `<p>Event: <strong>${event}</strong></p>`;
-
-    if (booking) {
-      let dateStr = "";
-      if (booking?.date) {
-        try {
-          const d = new Date(booking.date);
-          dateStr = isNaN(d.getTime())
-            ? booking.date // fallback if already a readable string
-            : d.toLocaleDateString("en-IN", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              });
-        } catch {
-          dateStr = booking.date;
-        }
-      }
-
-      html += `<p>Booking Date: ${dateStr || "N/A"}</p><p>StartTime: ${
-        booking.startTime || booking.time || "N/A"
-      }</p>`;
-      text += `\nBooking Date: ${dateStr || "N/A"}\nStartTime: ${
-        booking.startTime || booking.time || "N/A"
-      }`;
-    }
-
-    // Add more context for specific events
-    if (event.toLowerCase().includes("created")) {
-      subject = "Booking request created";
-      html = `<p>A new booking request has been created.</p>` + html;
-      text = `A new booking request has been created.\n` + text;
-    } else if (event.toLowerCase().includes("cancel")) {
-      subject = "Booking request cancelled";
-      html = `<p>A booking request has been cancelled.</p>` + html;
-      text = `A booking request has been cancelled.\n` + text;
-    } else if (event.toLowerCase().includes("approved")) {
-      subject = "Booking request approved";
-      html = `<p>Your booking request has been approved.</p>` + html;
-      text = `Your booking request has been approved.\n` + text;
-    } else if (event.toLowerCase().includes("rejected")) {
-      subject = "Booking request declined";
-      html = `<p>Your booking request has been declined.</p>` + html;
-      text = `Your booking request has been declined.\n` + text;
-    }
-
-    // send email (if configured)
-    let sent = false;
-    if (emails.length > 0 && NOTIFICATIONS_ENABLED) {
-      sent = await sendEmails({ toEmails: emails, subject, text, html });
-    } else {
-      console.log(
-        "No recipient emails found or notifications disabled — saved only"
-      );
-    }
-
-    // update sentStatus on doc
-    saved.sentStatus = !!sent;
-    await saved.save();
+    makeNotification(recipient, event, slotId);
 
     return res
       .status(201)
@@ -193,6 +94,110 @@ export const createNotification = async (req, res) => {
       .json({ message: "Server error", error: err.message });
   }
 };
+
+export const makeNotification = async (recipient, event, slotId) => {
+
+  if (!recipient || !event) {
+    return res
+      .status(400)
+      .json({ message: "recipient and event are required" });
+  }
+
+  console.log("///")
+  console.log(recipient, event, slotId);
+
+  // Save notification document
+  const notif = new Notification({
+    recipient,
+    event,
+    slotId: slotId || null,
+  });
+
+  const saved = await notif.save();
+  // Lookup emails for scholars & faculties
+  const scholarIds = (recipient.scholarIds || []).filter(Boolean);
+  const facultyIds = (recipient.facultyIds || []).filter(Boolean);
+
+  const userIds = [...scholarIds, ...facultyIds];
+
+  let users = [];
+  if (userIds.length > 0) {
+    users = await User.find({ _id: { $in: userIds } }).select("email name");
+  }
+
+  const emails = users.map((u) => u.email).filter(Boolean);
+
+  // Optional: If slotId provided, we can lookup booking to include details in message
+  let booking = null;
+  if (slotId) {
+    try {
+      booking = await Booking.findById(slotId).lean();
+    } catch (err) {
+      // ignore silently, booking may not exist yet
+    }
+  }
+
+  // Prepare a simple template depending on event
+  let subject = `Notification: ${event}`;
+  let text = `Event: ${event}`;
+  let html = `<p>Event: <strong>${event}</strong></p>`;
+
+  if (booking) {
+    let dateStr = "";
+    if (booking?.date) {
+      try {
+        const d = new Date(booking.date);
+        dateStr = isNaN(d.getTime())
+          ? booking.date // fallback if already a readable string
+          : d.toLocaleDateString("en-IN", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          });
+      } catch {
+        dateStr = booking.date;
+      }
+    }
+
+    html += `<p>Booking Date: ${dateStr || "N/A"}</p><p>StartTime: ${booking.startTime || booking.time || "N/A"
+      }</p>`;
+    text += `\nBooking Date: ${dateStr || "N/A"}\nStartTime: ${booking.startTime || booking.time || "N/A"
+      }`;
+  }
+
+  // Add more context for specific events
+  if (event.toLowerCase().includes("created")) {
+    subject = "Booking request created";
+    html = `<p>A new booking request has been created.</p>` + html;
+    text = `A new booking request has been created.\n` + text;
+  } else if (event.toLowerCase().includes("cancel")) {
+    subject = "Booking request cancelled";
+    html = `<p>A booking request has been cancelled.</p>` + html;
+    text = `A booking request has been cancelled.\n` + text;
+  } else if (event.toLowerCase().includes("approved")) {
+    subject = "Booking request approved";
+    html = `<p>Your booking request has been approved.</p>` + html;
+    text = `Your booking request has been approved.\n` + text;
+  } else if (event.toLowerCase().includes("rejected")) {
+    subject = "Booking request declined";
+    html = `<p>Your booking request has been declined.</p>` + html;
+    text = `Your booking request has been declined.\n` + text;
+  }
+
+  // send email (if configured)
+  let sent = false;
+  if (emails.length > 0 && NOTIFICATIONS_ENABLED) {
+    sent = await sendEmails({ toEmails: emails, subject, text, html });
+  } else {
+    console.log(
+      "No recipient emails found or notifications disabled — saved only"
+    );
+  }
+
+  // update sentStatus on doc
+  saved.sentStatus = !!sent;
+  await saved.save();
+}
 
 /* Optional: simple listing endpoint (non-invasive) */
 export const listNotifications = async (req, res) => {

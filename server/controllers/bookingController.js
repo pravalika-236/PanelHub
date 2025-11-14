@@ -1,5 +1,6 @@
 import Booking from "../models/Booking.js";
 import FacultyFreeSlot from "../models/FacultyFreeSlot.js";
+import { makeNotification } from "./notificationController.js";
 
 export const getScholarActiveBooking = async (req, res) => {
   try {
@@ -97,6 +98,8 @@ export const cancelScholarBooking = async (req, res) => {
         { $set: { [`freeSlot.${date}.${time}.bookStatus`]: false } }
       );
     })
+    const booking = await Booking.findById(id)
+    await makeNotification([booking.scholarId.toString(), ...facultyIds.map(id => id)], "cancel", id)
     await Booking.findByIdAndDelete(id);
     res.json({ success: true, message: "Booking cancelled successfully!" });
   } catch (err) {
@@ -127,6 +130,8 @@ export const cancelFacultyBooking = async (req, res) => {
         );
       }
     })
+    const booking = await Booking.findById(id)
+    await makeNotification([booking.scholarId.toString(), ...facultyIds.map(id => id)], "cancel", id)
     await Booking.findByIdAndDelete(id);
     res.json({ success: true, message: "Booking cancelled successfully!" });
   } catch (err) {
@@ -151,6 +156,8 @@ export const approveFacultyBooking = async (req, res) => {
       booking.status = "booked";
       await booking.save();
     }
+
+    await makeNotification([booking.scholarId.toString(), ...booking.facultyApprovals.map(faculty => faculty.facultyId)], "approve", id)
 
     res.json({ success: true, message: "Approved successfully!" });
   } catch (err) {
