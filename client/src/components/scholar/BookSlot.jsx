@@ -139,7 +139,7 @@ const BookSlot = () => {
         <button
           onClick={() => handleSearchSlots()}
           className="btn btn-primary"
-          disabled={hasActiveBooking || selectedFaculties.length === 0 || selectedFaculties.length === 3}
+          disabled={hasActiveBooking || selectedFaculties.length === 0 || selectedFaculties.length > 3}
         >
           {"Search Available Slots"}
         </button>
